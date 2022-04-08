@@ -4,7 +4,7 @@ The only updated portions since then are the qw_EOS.cpp file (Newest version pro
 
 For the accretion problem, I specify inflow at the inner and outer boundaries.
 Values for v and rho at the outer boundary are calculated by using v_out = -sqrt(GM/(2R_out)) and rho_out=Mdot/(4 pi r^2 |v_out|).
-For these calculations, Solar mass is assumed to be 2e33 g. Maybe I need a more specific value here.
+For these calculations, Solar mass is assumed to be 2e33 g. Maybe I need a more specific value here, since this might not agree with how Solar mass is defined in Athena++.
 Density is fixed at the inner boundary, where the value for the inner density is borrowed from the final output of the previous run, i.e., the input text file.
 Values for the pressure at the inner and outer boundaries are borrowed from the final output of the previous run too.
 Pressure is held constant because temperature needs to be held constant at the boundaries when interpolated from pressure.
