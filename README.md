@@ -12,3 +12,5 @@ Otherwise, unphysical rises in pressure and temperature occur at the boundaries.
 
 This repository was created to diagnose issues with setting the mass accretion rate at the outer boundary for the accretion problem.
 For instance, if a mass accretion rate of Mdot=1.2 Msun/s is specified in athinput.accretion at the outer boundary by holding the mass density and velocity constant, the resulting value for Mdot throughout the simulation will be close to 1.2 Msun/s, but not exact.
+
+The default setup for the athinput.accretion file is to perturb the neutrino luminosity (from 16e51 erg/s to 20e51 erg/s for both electron neutrinos and antineutrinos) of a steady-state 1D accretion solution that has Mdot=1.2 Msun/s and Lnu=16e51 erg/s while keeping neutrino energies fixed.

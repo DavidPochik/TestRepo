@@ -1,0 +1,105 @@
+<comment>
+problem   = Parker Wind
+configure = --prob parker_my_IC --coord spherical_polar --eos general/helmholtz -hdf5 -mpi -h5double
+
+<job>
+problem_id = parker  # problem ID: basename of output filenames
+
+<output1>
+file_type  = hdf5      # Binary data dump
+variable   = prim      # variables to be output
+id         = prim
+dt         = 4.8213356e-4       # time increment between outputs (5.0)
+xdmf       = true      # write xdmf files
+
+<output2>
+file_type  = hdf5      # Binary data dump
+variable   = uov      # variables to be output
+id         = uov
+dt         = 4.8213356e-4       # time increment between outputs (5.0)
+xdmf       = true      # write xdmf files
+
+<output3>
+file_type  = rst
+id         = rst
+dt         = 4.8213356e-3
+
+<time>
+cfl_number = 0.3            # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = -1         # cycle limit
+tlim       = 4.8213356           # time limit | units of 9.64267121e-5 s
+integrator  = vl2           # time integration algorithm
+xorder      = 2             # order of spatial reconstruction
+ncycle_out  = 4.8213356e-4              # interval for stdout summary info
+
+<mesh>
+nx1        = 512            # Number of zones in X1-direction
+x1min      = 1.2e6              # minimum value of X1 |
+x1max      = 3e8           # maximum value of X1 |
+x1rat      = 1.010842461388 #(x1max/x1min)^(1.0/nx1)            # log spacing ratio
+ix1_bc     = user           # inner-X1 boundary flag
+ox1_bc     = user           # inner-X1 boundary flag
+
+nx2    	   = 1            # number of cells in theta-direction
+x2min  	   = 1.470796326794            # minimum theta
+x2max  	   = 1.570796326794  # maximum theta (pi)
+ix2_bc 	   = periodic    # upper boundary
+ox2_bc 	   = periodic    # lower boundary
+
+nx3    	   = 1              # number of cells in phi-direction
+x3min  	   = 0.0            # minimum phi
+x3max  	   = 6.283185307179586  # maximum phi (2*pi)
+ix3_bc 	   = periodic       # clockwise boundary
+ox3_bc 	   = periodic       # counterclockwise boundary
+
+<meshblock>
+nx1 = 64
+nx2 = 1
+nx3 = 1
+
+<hydro>
+eos_file_name        = helm_table.dat  # Specify EOS table filename (if used)
+eos_file_type        = helm            # Specify EOS table file type [auto,ascii,binary,hdf5]
+helm_assume_defaults = true
+helm_Tfloor          = true
+helm_nmax            = 20000
+helm_abar            = 1.0
+helm_zbar            = 0.45            # Proton fraction=0.45, neutron fraction=0.55
+helm_ye              = 0.45            # Electron fraction=0.45
+eos_rho_unit         = 1
+eos_egas_unit        = 1
+dfloor               = 1e-10
+pfloor               = 1e-10
+
+<problem>
+rho_0       = 1e11
+GM          = 1.85844204e26  # 1.4 Msun NS
+inner_BC_choice = 0
+rho_pow     = -2.45933490
+rho_coeff   = 3.93462655e8
+Tpow        = -0.672807264
+Tcoeff      = 2.26024737e10
+vpow        = 0.450631975
+vcoeff      = 1.59362095e8
+Na          = 6.023e23       # Avagadro's constant
+Ye          = 0.45           # electron fraction
+# initial cooling parameters
+T_cutoff    = 0.5 #MeV
+L_nubar     = 10.176                #units of 1e51 ergs/s
+L_nu        = 7.824
+eps_nubar   = 18.8148877              #MeV
+eps_nu      = 15.9185426
+# Final cooling parameters (these are all optional arguments)
+l_transition_start = 1e99    # start cooling trasition (optional arg)
+l_transition_end   = 2e99    # end cooling transition  (optional arg)
+L_nubar_f   = 10.176         # units of 1e51 ergs/s
+L_nu_f      = 7.824
+eps_nubar_f = 18.8148877     # MeV
+eps_nu_f    = 15.9185426
+# IC data file
+file        = My_IC_rho11_512.txt
+rows        = 512
+cols        = 3
+col_rho     = 0
+col_v       = 1
+col_T       = 2

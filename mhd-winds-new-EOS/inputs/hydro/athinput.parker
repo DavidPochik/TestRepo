@@ -1,0 +1,86 @@
+<comment>
+problem   = Parker Wind
+configure = --prob parker --coord spherical_polar --eos isothermal -hdf5 -mpi -b -h5double
+
+<job>
+problem_id = parker  # problem ID: basename of output filenames
+
+<output1>
+file_type  = hst       # History data dump
+dt         = 0.01      # time increment between outputs
+
+<output2>
+file_type  = hdf5      # Binary data dump
+variable   = prim      # variables to be output
+id         = prim
+dt         = 1.0       # time increment between outputs
+xdmf       = true      # write xdmf files
+
+<output3>
+file_type  = hdf5      # Binary data dump
+variable   = cons      # variables to be output
+id         = cons
+dt         = 1.0       # time increment between outputs
+xdmf       = true      # write xdmf files
+
+<output4>
+file_type  = hdf5      # Binary data dump
+id         = uov
+variable   = uov      # variables to be output
+dt         = 1.0      # time increment between outputs
+xdmf       = true     # write xdmf files
+
+<output4>
+file_type  = rst
+id         = rst
+dt         = 10
+
+<time>
+cfl_number = 0.3            # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = 100000         # cycle limit
+tlim       = 100.0          # time limit | units of 7.3e-5 s
+integrator  = vl2           # time integration algorithm
+xorder      = 2             # order of spatial reconstruction
+ncycle_out  = 1             # interval for stdout summary info
+
+<mesh>
+nx1        = 512            # Number of zones in X1-direction
+x1min      = 1              # minimum value of X1 | units of 10^6 cm
+x1max      = 50             # maximum value of X1 | units of 10^6 cm
+x1rat      = 1.00766993434 #(x1max/x1min)^(1.0/nx1)            # log spacing ratio
+ix1_bc     = user           # inner-X1 boundary flag
+ox1_bc     = user           # inner-X1 boundary flag
+
+nx2    	   = 1            # number of cells in theta-direction
+x2min  	   = 1.470796326794            # minimum theta
+x2max  	   = 1.570796326794  # maximum theta (pi)
+ix2_bc 	   = periodic    # upper boundary
+ox2_bc 	   = periodic    # lower boundary
+
+nx3    	   = 1              # number of cells in phi-direction
+x3min  	   = 0.0            # minimum phi
+x3max  	   = 6.283185307179586  # maximum phi (2*pi)
+ix3_bc 	   = periodic       # clockwise boundary
+ox3_bc 	   = periodic       # counterclockwise boundary
+
+<meshblock>
+nx1 = 64
+nx2 = 1
+nx3 = 1
+
+<hydro>
+gamma = 1.50
+iso_sound_speed = 1.0
+dfloor = 1e-10
+pfloor = 1e-10
+
+<problem>
+rho_0 = 1.0                # Mass units of 5e-5 msun
+GM = 1.0                   # 1.4 Msun NS
+v_power = 0.5
+rot = 0.0		   # Ratio of Omega*R to vesc at r=R
+mag = 0.0		   # Ratio of alfven speed to vesc at r=R
+alpha = 0.0		   # angle of magnetosphere with respect to rotation axis
+NON_BAROTROPIC_EOS = true
+GENERAL_EOS = false
+MAGNETIC_FIELDS_ENABLED = false

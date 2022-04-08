@@ -1,0 +1,82 @@
+<comment>
+problem   = Parker Wind
+configure = --prob parker --coord spherical_polar --eos isothermal -hdf5 -mpi -b -h5double
+
+<job>
+problem_id = parker  # problem ID: basename of output filenames
+
+<output1>
+file_type  = hst       # History data dump
+dt         = 0.01      # time increment between outputs
+
+<output2>
+file_type  = hdf5      # Binary data dump
+variable   = prim      # variables to be output
+dt         = 1.0       # time increment between outputs
+xdmf       = true      # write xdmf files
+
+<output3>
+file_type  = hdf5      # Binary data dump
+id         = divB
+variable   = uov      # variables to be output
+dt         = 1.0      # time increment between outputs
+xdmf       = true     # write xdmf files
+
+<output4>
+file_type  = rst
+id         = rst
+dt         = 10
+
+<time>
+cfl_number = 0.3            # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = 100000         # cycle limit
+tlim       = 100.0          # time limit | units of 7.3e-5 s
+integrator  = vl2           # time integration algorithm
+xorder      = 2             # order of spatial reconstruction
+ncycle_out  = 1             # interval for stdout summary info
+
+<mesh>
+nx1        = 256            # Number of zones in X1-direction
+x1min      = 1              # minimum value of X1 | units of 10^6 cm
+x1max      = 50             # maximum value of X1 | units of 10^6 cm
+x1rat      = 1.0            # log spacing ratio
+ix1_bc     = user           # inner-X1 boundary flag
+ox1_bc     = user           # inner-X1 boundary flag
+
+nx2    	   = 256            # number of cells in theta-direction
+x2min  	   = 0.0            # minimum theta
+x2max  	   = 3.141592653589793  # maximum theta (pi)
+ix2_bc 	   = polar_wedge    # upper boundary
+ox2_bc 	   = polar_wedge    # lower boundary
+
+nx3    	   = 1              # number of cells in phi-direction
+x3min  	   = 0.0            # minimum phi
+x3max  	   = 6.283185307179586  # maximum phi (2*pi)
+ix3_bc 	   = periodic       # clockwise boundary
+ox3_bc 	   = periodic       # counterclockwise boundary
+
+<meshblock>
+nx1 = 64
+nx2 = 64
+nx3 = 1
+
+<hydro>
+gamma = 1.5
+iso_sound_speed = 1.0
+dfloor = 1e-10
+pfloor = 1e-10
+eos_file_name   = helm_table.dat  # Specify EOS table filename (if used)
+eos_file_type   = helm  # Specify EOS table file type [auto,ascii,binary,hdf5]
+helm_assume_defaults = true
+helm_abar = 1.0
+helm_zbar = 1.0
+helm_ye = 1.0
+eos_rho_unit    = 1.0
+eos_egas_unit   = 1.0
+
+<problem>
+rho_0 = 1.0                # Mass units of 5e-5 msun
+GM = 1.0                   # 1.4 Msun NS
+rot = 0.0		   # Ratio of Omega*R to vesc at r=R
+mag = 0.0		   # Ratio of alfven speed to vesc at r=R
+alpha = 0.0		   # angle of magnetosphere with respect to rotation axis
