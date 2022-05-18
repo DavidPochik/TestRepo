@@ -142,7 +142,7 @@ class HelmTable {
     xfdt.InitWithShallowSlice(ptable->table.data, 3, 16, 1);
   }
 
-// OutData has length 6
+// OutData has length 7
   void HelmLookupRhoT(Real den, Real temp, AthenaArray<Real> &OutData) {
     Real din = ye * den;
     //hash locate this temperature and density
@@ -659,6 +659,7 @@ class HelmTable {
     OutData(4) = asq;
     OutData(5) = temp;
     OutData(6) = dpresdd;
+    OutData(7) = -1.0; // MSBC: I just put a dummy value here to make it 7 values
   }
 
   // index = 0 for internal energy; index = 2 for pressure; var = int energy or pressure
@@ -934,14 +935,28 @@ Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
   return EosData(4) * inv_vsqr_unit_;
 }
 
+// MSBC: I can't remember why we chose 7 here
 void EquationOfState::SevenFromRhoT(Real rho, Real T, AthenaArray<Real> &out) {
   phelm->HelmLookupRhoT(rho * rho_unit_, T, out);
+  LastTemp = T;
+  out(0) *= inv_egas_unit_;
+  out(1) *= inv_egas_unit_;
+  out(2) *= inv_egas_unit_;
+  out(3) *= inv_egas_unit_;
+  out(4) *= inv_vsqr_unit_;
+  out(6) *= inv_egas_unit_ * rho_unit_;
 }
 
 Real EquationOfState::TFromRhoP(Real rho, Real pres) {
   phelm->HelmInvert(rho * rho_unit_, LastTemp, pres * egas_unit_, 2, EosData);
   LastTemp = EosData(5);
   return LastTemp;
+}
+
+Real EquationOfState::PresFromRhoT(Real rho, Real T) {
+  phelm->HelmLookupRhoT(rho * rho_unit_, T, EosData);
+  LastTemp = T;
+  return EosData(2) * inv_egas_unit_;
 }
 
 Real EquationOfState::TFromRhoEgas(Real rho, Real egas) {
@@ -955,7 +970,7 @@ Real EquationOfState::TFromRhoEgas(Real rho, Real egas) {
 //  \brief Initialize constants for EOS
 void EquationOfState::InitEosConstants(ParameterInput *pin) {
   phelm = new HelmTable(pin, ptable);
-  EosData.NewAthenaArray(6);
+  EosData.NewAthenaArray(7);
   LastTemp = std::pow(10.0, 0.5 * (phelm->tlo + phelm->thi));
   ///////////////////
   // test
