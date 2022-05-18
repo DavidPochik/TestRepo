@@ -2,7 +2,7 @@
 problem   = Accretion
 # configure = --prob parker_my_IC --coord spherical_polar --eos general/eos_qw -hdf5 -h5double
 # --- FOR STANDARD USE ---
-configure = --prob accretion --eos general/helmholtz --coord spherical_polar -hdf5 -h5double -mpi
+configure = --prob accretion_helmholtz --eos general/helmholtz --coord spherical_polar -hdf5 -h5double -mpi
 # --- FOR temp BC set in PG file (kind of?)---
 #configure = --prob accretion_tempIC --eos general/eos_qw --coord spherical_polar -hdf5 -h5double -mpi
 # --- FOR PERTURBATION ---
