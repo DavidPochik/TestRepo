@@ -15,14 +15,14 @@ problem_id = accretion  # problem ID: basename of output filenames
 file_type  = hdf5      # Binary data dump
 variable   = prim      # variables to be output
 id         = prim
-dt         = 8.0e-3 #4.8213356e-4       # time increment between outputs (5.0), used to be the same but e-4
+dt         = 1.0e-3 #4.8213356e-4       # time increment between outputs (5.0), used to be the same but e-4
 xdmf       = true      # write xdmf files
 
 <output2>
 file_type  = hdf5      # Binary data dump
 variable   = uov      # variables to be output
 id         = uov
-dt         = 8.0e-3 #3.85706848e-3       # time increment between outputs (5.0), used to be the same but e-4
+dt         = 1.0e-3 #3.85706848e-3       # time increment between outputs (5.0), used to be the same but e-4
 xdmf       = true      # write xdmf files
 
 <output3>
@@ -40,7 +40,7 @@ dt         = 5.0e-1 #4.8213356e-1       # this was e^-3
 <time>
 cfl_number = 0.3            # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim       = -1         # cycle limit
-tlim       = 1.0         # time limit | units of 9.64267121e-5 s, used to be 4.8213356
+tlim       = 0.1         # time limit | units of 9.64267121e-5 s, used to be 4.8213356
 integrator  = vl2           # time integration algorithm
 xorder      = 2             # order of spatial reconstruction
 ncycle_out  = 4.8213356e-2             # interval for stdout summary info, used to be e^-4
@@ -48,8 +48,8 @@ ncycle_out  = 4.8213356e-2             # interval for stdout summary info, used 
 <mesh>
 nx1        = 512         # Number of zones in X1-direction, normally 512 in 1D, BUT 256 IN 2D
 x1min      = 5.0e6              # minimum value of X1 |
-x1max      = 1.0e8           # maximum value of X1 |
-x1rat      = 1.00586819036 #for 256  #(x1max/x1min)^(1.0/nx1)            # log spacing ratio
+x1max      = 1.0e9           # maximum value of X1 |
+x1rat      = 1.01040200469 #for 256  #(x1max/x1min)^(1.0/nx1)            # log spacing ratio
 ix1_bc     = user           # inner-X1 boundary flag
 ox1_bc     = user           # inner-X1 boundary flag
 
@@ -84,11 +84,11 @@ dfloor = 1.0
 pfloor = 1.0
 
 <problem>
-rho_0       = 1.070154104966e11
-rho_f       = 2.398690164250e7 #1.650830e7 for asymmetries
-v_f         = -1.006976614380e9 #-1.046717e9 for asymmetries
-p_f         = 6.932638119388e24
-p_0         = 5.903259799810e29
+rho_0       = 1.065102653959e11
+rho_f       = 8.969048221152e5 #1.650830e7 for asymmetries
+v_f         = -3.346626522396e8 #-1.046717e9 for asymmetries
+p_f         = 5.053913538921e22
+p_0         = 5.870031705005e29
 GM          = 1.85844204e26  # 1.4 Msun NS
 inner_BC_choice = 0          # 0
 
@@ -106,7 +106,7 @@ mag         = 0.0 	     # Ratio of alfven speed to vesc at r=R
 alpha       = 0.0	     # angle of magnetosphere with respect to rotation axis
 
 # initial cooling parameters
-T_cutoff    = 0.5                  # 0.0 #MeV
+T_cutoff    = 0.0                 # 0.0 #MeV
 T_high      = 0.66
 tau_h       = 0.666
 L_nubar     = 32.0 #16.0 for asymmetries      # 2.0               #units of 1e51 ergs/s
@@ -121,13 +121,14 @@ eps_nu      = 13.0     #11.25615
 #eps_nubar_f = 18.8148877     # MeV
 #eps_nu_f    = 15.9185426
 # IC data file
-file        = mdot1pt64_Lnu_32e51_IC_for_mdot1pt5_Rmax_1e8cm.txt #mdot1pt2_Lnu_32e51_STABLE_IC_for_256x128_2D_Run.txt #mdot1pt0_Lcore_16pt0e51_IC_for_mdot0pt9.txt
+file        = helmholtzIC_mdot1pt847_Lnu_32e51_Rmax_1e9cm.txt #mdot1pt2_Lnu_32e51_STABLE_IC_for_256x128_2D_Run.txt #mdot1pt0_Lcore_16pt0e51_IC_for_mdot0pt9.txt
 # file        = My_IC_rho12.txt
 rows        = 512           #14780        # 512
-cols        = 3            #5            # 3
+cols        = 4            #5            # 3
 col_rho     = 0
 col_v       = 1
 col_T       = 2
+col_p       = 3
 #col_p       = 3
 set_T_at_r0 = false
 
