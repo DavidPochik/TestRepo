@@ -1,6 +1,6 @@
 <comment>
 problem   = Accretion
-configure = --prob accretion --eos general/eos_qw --coord spherical_polar -hdf5 --hdf5_path ${HDF5_DIR} -h5double
+configure = --prob accretion --eos general/eos_qw --coord spherical_polar -hdf5 --hdf5_path=${HDF5_DIR} -h5double -mpi
 
 <job>
 problem_id = accretion  # problem ID: basename of output filenames
