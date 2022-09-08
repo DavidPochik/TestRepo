@@ -1,0 +1,117 @@
+<comment>
+problem   = Accretion
+configure = --prob accretion --eos general/qw_eos --coord spherical_polar -hdf5 --hdf5_path=${HDF5_DIR} -h5double -mpi --nscalars=1
+
+<job>
+problem_id = accretion  # problem ID: basename of output filenames
+
+<output1>
+file_type = hdf5      # Binary data dump
+variable  = prim      # variables to be output
+id        = prim
+dt        = 8.0e-3    # time increment between outputs
+xdmf      = true      # write xdmf files
+
+<output2>
+file_type = hdf5      # Binary data dump
+variable  = uov       # variables to be output
+id        = uov
+dt        = 8.0e-3    # time increment between outputs
+xdmf      = true      # write xdmf files
+
+<output3>
+file_type = rst
+id        = rst
+dt        = 5.0e-1
+
+<output4>
+file_type = hdf5
+variable  = cons
+id        = cons
+dt        = 8.0e-3
+xdmf      = true
+
+<time>
+cfl_number = 0.3            # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = -1             # cycle limit
+tlim       = 0.5            # time limit
+integrator = vl2           # time integration algorithm
+xorder     = 2             # order of spatial reconstruction
+ncycle_out = 4.8213356e-2  # interval for stdout summary info, used to be e^-4
+
+<mesh>
+nx1    = 512            # Number of zones in X1-direction
+x1min  = 5.0e6          # minimum value of X1 |
+x1max  = 1.0e8          # maximum value of X1 |
+x1rat  = 1.00586819036  # (x1max/x1min)^(1.0/nx1) log spacing ratio
+ix1_bc = user           # inner-X1 boundary flag
+ox1_bc = user           # inner-X1 boundary flag
+
+nx2    = 1
+x2min  = 0.0                 # minimum theta
+x2max  = 3.1415926535897931  # maximum theta (pi)
+ix2_bc = periodic            # upper boundary
+ox2_bc = periodic            # lower boundary
+
+nx3    = 1                  # number of cells in phi-direction
+x3min  = 0.0                # minimum phi
+x3max  = 6.283185307179586  # maximum phi (2*pi)
+ix3_bc = periodic           # clockwise boundary
+ox3_bc = periodic           # counterclockwise boundary
+
+<meshblock>
+nx1 = 32
+nx2 = 1
+nx3 = 1
+
+<hydro>
+eos_ye_index = 0
+Ye_0         = 9.744568297198e-2
+Ye_f         = 4.642857000000e-1
+
+<problem>
+# Boundary Condition values (Assuming InflowInnerX1)
+inner_BC_choice = 0                 # 0 = InflowInnerX1
+rho_0           = 2.531924178e11    # g/cm^3
+rho_f           = 8.273339473461e6  # g/cm^3
+v_f             = -9.731761111663e8 # cm/s
+p_f             = 3.150801939681e24 # erg/cm^3
+mdot            = 0.5               # Msun/s
+
+# Constants
+GM = 1.85844204e26 # 1.4 Msun NS
+Na = 6.023e23      # Avagadro's constant
+
+# Double_NR parameters
+Tg_doubleNR        = 3.068907622306e10
+Yeg_doubleNR       = 0.01
+DeltaTg_doubleNR   = 1.0e-3
+DeltaYeg_doubleNR  = 1.0e-3
+Tolerance_doubleNR = 1.0e-4
+Modifier_doubleNR  = 1.0e0
+MaxC_doubleNR      = 20
+eps_doubleNR       = 1.0e-10
+qdot_factor        = 1.0e21
+ydot_factor        = 1.0e2
+
+# B-field terms
+B_0   = 0   # initial B-field strength in G
+rot   = 0.0 # Ratio of Omega*R to vesc at r=R
+mag   = 0.0 # Ratio of alfven speed to vesc at r=R
+alpha = 0.0 # angle of magnetosphere with respect to rotation axis
+
+# Neutrino properties
+T_cutoff  = 0.5  # Cutoff temperature (qdotQW), MeV
+L_nubar   = 10.0 # units of 1e51 ergs/s
+L_nu      = 10.0 # units of 1e51 erg/s
+eps_nubar = 15.5 # MeV, borrowed from Pejcha & Thompson 2012
+eps_nu    = 13.0 # MeV, borrowed from Pejcha & Thompson 2012
+
+# IC data file
+file        = Mdot0pt5_Lnu_10e51_YeqTeq_SteadyStateIC.txt
+rows        = 512
+cols        = 4
+col_rho     = 0
+col_v       = 1
+col_T       = 2
+col_Ye      = 3
