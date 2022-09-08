@@ -425,7 +425,7 @@ Real EquationOfState::AsqFromRhoP(Real rho, Real pres, const Real* r) {
   return EosData(EOS::iAsq);
 }
 
-//! THIS PROBABLY DOESNT WORK
+// EoS function used in accretion problem
 Real EquationOfState::TFromRhoP(Real rho, Real pres, Real* r) {
   Real ye = fixed_ye;
   if (NSCALARS > 0 && i_ye >= 0) {
@@ -436,7 +436,7 @@ Real EquationOfState::TFromRhoP(Real rho, Real pres, Real* r) {
   return LastTemp;
 }
 
-//! THIS PROBABLY DOESNT WORK
+// EoS function used in accretion problem
 Real EquationOfState::PresFromRhoT(Real rho, Real T, Real* r) {
   Real ye = fixed_ye;
   if (NSCALARS > 0 && i_ye >= 0) {
@@ -446,11 +446,10 @@ Real EquationOfState::PresFromRhoT(Real rho, Real T, Real* r) {
   return EosData(EOS::iP);
 }
 
-// Putting these here just to get things to compile (These are called in HSEInnerX1/HSE2InnerX1
+// Putting these here just to get things to compile (These are called in HSEInnerX1/HSE2InnerX1 in accretion.cpp,
 // but I don't use either of those for my accretion problem).
 Real EquationOfState::TFromRhoP(Real rho, Real pres) {
   Real ye = fixed_ye;
-//  std::cout << "test1" << std::endl;
   TempInvert(rho, LastTemp, ye, pres, EOS::iP, EosData);
   LastTemp = EosData(EOS::iT);
   return LastTemp;
@@ -458,7 +457,6 @@ Real EquationOfState::TFromRhoP(Real rho, Real pres) {
 
 Real EquationOfState::PresFromRhoT(Real rho, Real T) {
   Real ye = fixed_ye;
-//  std::cout << "test2" << std::endl;
   QWData(rho, T, ye, EosData);
   return EosData(EOS::iP);
 }

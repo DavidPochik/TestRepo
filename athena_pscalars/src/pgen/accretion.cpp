@@ -1026,41 +1026,18 @@ void InflowInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
     for (int j=js; j<=je; ++j) {
       Real theta = pco->x2v(j);
       for (int i=1; i<=ngh; ++i) {
-//        Real r = pco->x1v(is-i);
         prim(IDN,k,j,is-i) = rho_0;
-//        prim(IDN,k,j,is-i) = rho_0 * std::exp((r_0 - r) * mu / (dpdd_0 * r * r_0)); //rho_0;
         Real r_g           = pco->x1v(is-i);
-//        prim(IDN,k,j,is-i) = rho_0 * std::exp((r_a - r_g) * mu / (dpdd_0 * r_a * r_g));
         Real rho_a         = prim(IDN,k,j,is);
         Real rho_g         = prim(IDN,k,j,is-i);
-
-        std::cout << "rho_g (is-i=" << is-i << ") = " << rho_g << " g/cm^3" << std::endl;
-//        std::cout << "r_a                         = " << r_a << " cm" << std::endl;
-//        std::cout << "r_g                         = " << r_g << " cm" << std::endl;
-        std::cout << "T_eq                        = " << T_eq << " K" << std::endl;
-        std::cout << "Ye_eq                       = " << Ye_eq << std::endl;
-
-//        prim(IVX,k,j,is-i) = (-1.0 * Mdot * (2.0e33)) / (4.0 * PI * std::pow(r_0,2) * rho_0);
         prim(IVX,k,j,is-i) = (-1.0 * Mdot * (2.0e33)) / (4.0 * PI * std::pow(r_g,2) * rho_g);
         prim(IVY,k,j,is-i) = 0.0;
         prim(IVZ,k,j,is-i) = 0.0;
         // Specify Ye
         pmb->pscalars->r(ye_index,k,j,is-i) = Ye_eq;
 
-        // Define quantities for calculating pressure
-        Real deltaR = r_a - r_g;
-        Real R      = (r_a + r_g) / 2.0;
-        Real Rho    = (rho_a + rho_g) / 2.0;
-
         if (NON_BAROTROPIC_EOS)
-          prim(IPR,k,j,is-i) = p_0; //pmb->peos->PresFromRhoT(prim(IDN,k,j,is-i),T_eq,Yeq_ptr); //p_0;
-//          prim(IPR,k,j,is-i) = prim(IPR,k,j,is); //pmb->peos->PresFromRhoT(rho_g,T_eq,Yeq_ptr) - 1.0 * mu * Rho * (deltaR / std::pow(R,2));
-//          std::cout << "PresFromRhoT term = " << pmb->peos->PresFromRhoT(rho_g, T_eq, Yeq_ptr) << " erg/cm^3" << std::endl;
-//          std::cout << "Negative term     = " << -1.0 * mu * Rho * (deltaR / std::pow(R,2)) << " erg/cm^3" << std::endl;
-//          std::cout << "-------------" << std::endl;
-//          std::cout << "rho(is-i=" << is-i << ") = " << prim(IDN,k,j,is-i) << " g/cm^3" << std::endl;
-          std::cout << "p(is-i=" << is-i << ")   = " << prim(IPR,k,j,is-i) << " erg/cm^3" <<std::endl;
-//          std::cout << "vr(is-i=" << is-i << ")  = " << prim(IVX,k,j,is-i) << " cm/s" <<std::endl;
+          prim(IPR,k,j,is-i) = p_0;
       }
     }
   }
