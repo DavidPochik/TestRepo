@@ -1,18 +1,15 @@
-# athena-accretion
-My version of mhd-winds-new-EOS (https://github.com/mattjraives/mhd-winds), which is fairly old (dates back to mid 2021).
-The only updated portions since then are the qw_EOS.cpp file (Newest version provided by Tejas Prasanna on March 29th, 2022) and my problem generator file (accretion.cpp and similar copies).
+# athena-accretion (helmholtz + passive scalars)
+'athena_helmholtz_passive_scalars/' is a slightly modified version of the temperature_eos branch in athena_1 (pulled on 11/22/2022).
+I've added a new helmholtz eos file called 'helmholtz_experimental', which is adapted to work with the accretion problem generator.
+The files in 'athena_helmholtz_passive_scalars/' that differ from athena-1 include the following:
+	1) configure.py
+		- Changed 'helmholtz' -> 'helmholtz_experimental' in the conditional statement that enables a table EoS
+	2) src/eos/eos.hpp
+		- Added PresFromRhoT(...) and TFromRhoP(...) EoS functions to accommodate EoS calls in the accretion problem generator.
+	3) src/eos/general/qw_eos.cpp
+		- Added PresFromRhoT(...) and TFromRhoP(...) EoS functions with passive scalar capabilities.
+		- Added a conditional statement to AsqFromRhoP(...) to prevent issues at runtime. This is a bit of a hack.
+	4) src/utils/eos_table_class.cpp
+		- Included helmholtz table options to accommodate the helm_table.dat filetype
 
-For the accretion problem, I specify inflow at the inner and outer boundaries.
-Values for v and rho at the outer boundary are calculated by using v_out = -sqrt(GM/(2R_out)) and rho_out=Mdot/(4 pi r^2 |v_out|).
-For these calculations, Solar mass is assumed to be 2e33 g. Maybe I need a more specific value here, since this might not agree with how Solar mass is defined in Athena++.
-Density is fixed at the inner boundary, where the value for the inner density is borrowed from the final output of the previous run, i.e., the input text file.
-Values for the pressure at the inner and outer boundaries are borrowed from the final output of the previous run too.
-Pressure is held constant because temperature needs to be held constant at the boundaries when interpolated from pressure.
-Otherwise, unphysical rises in pressure and temperature occur at the boundaries.
 
-The .athdf output files from the previous run are provided under 'PreviousRunFinalOutputData_DIR'.
-
-This repository was created to diagnose issues with setting the mass accretion rate at the outer boundary for the accretion problem.
-For instance, if a mass accretion rate of Mdot=1.2 Msun/s is specified in athinput.accretion at the outer boundary by holding the mass density and velocity constant, the resulting value for Mdot throughout the simulation will be close to 1.2 Msun/s, but not exact.
-
-The default setup for the athinput.accretion file is to perturb the neutrino luminosity (from 16e51 erg/s to 20e51 erg/s for both electron neutrinos and antineutrinos) of a steady-state 1D accretion solution that has Mdot=1.2 Msun/s and Lnu=16e51 erg/s while keeping neutrino energies fixed.
