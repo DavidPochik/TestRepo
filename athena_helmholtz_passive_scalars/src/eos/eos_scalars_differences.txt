@@ -1,0 +1,203 @@
+//===========================================================	//===========================================================
+// Athena++ astrophysical MHD code				// Athena++ astrophysical MHD code
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> a	// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> a
+// Licensed under the 3-clause BSD License, see LICENSE file 	// Licensed under the 3-clause BSD License, see LICENSE file 
+//===========================================================	//===========================================================
+//! \file eos_scalars.cpp					//! \file eos_scalars.cpp
+//! \brief implements functions in EquationOfState class for 	//! \brief implements functions in EquationOfState class for 
+
+// C headers							// C headers
+
+// C++ headers							// C++ headers
+#include <cmath>   // sqrt()					#include <cmath>   // sqrt()
+
+// Athena++ headers						// Athena++ headers
+#include "../athena.hpp"					#include "../athena.hpp"
+#include "../athena_arrays.hpp"					#include "../athena_arrays.hpp"
+#include "../field/field.hpp"					#include "../field/field.hpp"
+#include "../hydro/hydro.hpp"					#include "../hydro/hydro.hpp"
+#include "../mesh/mesh.hpp"					#include "../mesh/mesh.hpp"
+#include "../parameter_input.hpp"				#include "../parameter_input.hpp"
+#include "../scalars/scalars.hpp"				#include "../scalars/scalars.hpp"
+#include "eos.hpp"						#include "eos.hpp"
+
+//-----------------------------------------------------------	//-----------------------------------------------------------
+//! \fn void EquationOfState::PassiveScalarConservedToPrimiti	//! \fn void EquationOfState::PassiveScalarConservedToPrimiti
+//!           const AthenaArray<Real> &u, const AthenaArray<R	//!           const AthenaArray<Real> &u, const AthenaArray<R
+//!           AthenaArray<Real> &r, Coordinates *pco,		//!           AthenaArray<Real> &r, Coordinates *pco,
+//!           int il, int iu, int jl, int ju, int kl, int ku)	//!           int il, int iu, int jl, int ju, int kl, int ku)
+//! \brief Converts conserved into primitive passive scalar v	//! \brief Converts conserved into primitive passive scalar v
+
+void EquationOfState::PassiveScalarConservedToPrimitive(	void EquationOfState::PassiveScalarConservedToPrimitive(
+    AthenaArray<Real> &s, const AthenaArray<Real> &u, const A	    AthenaArray<Real> &s, const AthenaArray<Real> &u, const A
+    AthenaArray<Real> &r,					    AthenaArray<Real> &r,
+    Coordinates *pco, int il, int iu, int jl, int ju, int kl,	    Coordinates *pco, int il, int iu, int jl, int ju, int kl,
+  for (int n=0; n<NSCALARS; ++n) {				  for (int n=0; n<NSCALARS; ++n) {
+    for (int k=kl; k<=ku; ++k) {				    for (int k=kl; k<=ku; ++k) {
+      for (int j=jl; j<=ju; ++j) {				      for (int j=jl; j<=ju; ++j) {
+#pragma omp simd						#pragma omp simd
+        for (int i=il; i<=iu; ++i) {				        for (int i=il; i<=iu; ++i) {
+          const Real &d  = u(IDN,k,j,i);			          const Real &d  = u(IDN,k,j,i);
+							      >	          const Real di = 1.0/d;
+
+          //for (int n=0; n<NSCALARS; ++n) {			          //for (int n=0; n<NSCALARS; ++n) {
+          Real& s_n  = s(n,k,j,i);				          Real& s_n  = s(n,k,j,i);
+          Real& r_n  = r(n,k,j,i);				          Real& r_n  = r(n,k,j,i);
+          // apply passive scalars floor to conserved variabl	          // apply passive scalars floor to conserved variabl
+          // (multi-D fluxes may have caused it to drop below	          // (multi-D fluxes may have caused it to drop below
+          s_n = (s_n < scalar_floor_ * d) ?  scalar_floor_ * 	          s_n = (s_n < scalar_floor_ * d) ?  scalar_floor_ * 
+          r_n = s_n/d;					      |	          r_n = s_n * di;
+          // TODO(felker): continue to monitor the acceptabil	          // TODO(felker): continue to monitor the acceptabil
+          // (may create very large global conservation viola	          // (may create very large global conservation viola
+          // cycles of the slotted cylinder test)		          // cycles of the slotted cylinder test)
+
+          //r_n = (r_n < scalar_floor_) ? scalar_floor_ : r_n	          //r_n = (r_n < scalar_floor_) ? scalar_floor_ : r_n
+          //s_n = r_n * d;					          //s_n = r_n * d;
+        }							        }
+      }								      }
+    }								    }
+  }								  }
+  return;							  return;
+}								}
+
+// TODO(felker): a ton of overlap with ConservedToPrimitiveCe	// TODO(felker): a ton of overlap with ConservedToPrimitiveCe
+// AthenaArray<Real> targets + 2x function calls (pointwise E	// AthenaArray<Real> targets + 2x function calls (pointwise E
+void EquationOfState::PassiveScalarConservedToPrimitiveCellAv	void EquationOfState::PassiveScalarConservedToPrimitiveCellAv
+    AthenaArray<Real> &s, const AthenaArray<Real> &r_old, Ath	    AthenaArray<Real> &s, const AthenaArray<Real> &r_old, Ath
+    Coordinates *pco, int il, int iu, int jl, int ju, int kl,	    Coordinates *pco, int il, int iu, int jl, int ju, int kl,
+  MeshBlock *pmb = pmy_block_;					  MeshBlock *pmb = pmy_block_;
+  Hydro *ph = pmb->phydro;					  Hydro *ph = pmb->phydro;
+  PassiveScalars *ps = pmb->pscalars;				  PassiveScalars *ps = pmb->pscalars;
+
+  int nl = 0;							  int nl = 0;
+  int nu = NSCALARS - 1;					  int nu = NSCALARS - 1;
+  Real h = pco->dx1f(il);					  Real h = pco->dx1f(il);
+  Real C = (h*h)/24.0;						  Real C = (h*h)/24.0;
+
+  // Fourth-order accurate approx to cell-centered Hydro cons	  // Fourth-order accurate approx to cell-centered Hydro cons
+  AthenaArray<Real> &u_cc = ph->u_cc;				  AthenaArray<Real> &u_cc = ph->u_cc;
+  // Passive scalrs						  // Passive scalrs
+  AthenaArray<Real> &s_cc = ps->s_cc, &r_cc = ps->r_cc;		  AthenaArray<Real> &s_cc = ps->s_cc, &r_cc = ps->r_cc;
+  // Laplacians of cell-averaged conserved and 2nd order accu	  // Laplacians of cell-averaged conserved and 2nd order accu
+  // (reuse Hydro scratch arrays)				  // (reuse Hydro scratch arrays)
+  AthenaArray<Real> &laplacian_cc = ph->scr1_nkji_;  // ps->s	  AthenaArray<Real> &laplacian_cc = ph->scr1_nkji_;  // ps->s
+
+  // Compute and store Laplacian of cell-averaged conserved v	  // Compute and store Laplacian of cell-averaged conserved v
+  pco->Laplacian(s, laplacian_cc, il, iu, jl, ju, kl, ku, nl,	  pco->Laplacian(s, laplacian_cc, il, iu, jl, ju, kl, ku, nl,
+
+  // Compute fourth-order approximation to cell-centered cons	  // Compute fourth-order approximation to cell-centered cons
+  for (int n=nl; n<=nu; ++n) {					  for (int n=nl; n<=nu; ++n) {
+    for (int k=kl; k<=ku; ++k) {				    for (int k=kl; k<=ku; ++k) {
+      for (int j=jl; j<=ju; ++j) {				      for (int j=jl; j<=ju; ++j) {
+#pragma omp simd						#pragma omp simd
+        for (int i=il; i<=iu; ++i) {				        for (int i=il; i<=iu; ++i) {
+          // We do not actually need to store all cell-center	          // We do not actually need to store all cell-center
+          // but the ConservedToPrimitive() implementation op	          // but the ConservedToPrimitive() implementation op
+          s_cc(n,k,j,i) = s(n,k,j,i) - C*laplacian_cc(n,k,j,i	          s_cc(n,k,j,i) = s(n,k,j,i) - C*laplacian_cc(n,k,j,i
+        }							        }
+      }								      }
+    }								    }
+  }								  }
+
+  // Compute Laplacian of 2nd-order approximation to cell-ave	  // Compute Laplacian of 2nd-order approximation to cell-ave
+  pco->Laplacian(r, laplacian_cc, il, iu, jl, ju, kl, ku, nl,	  pco->Laplacian(r, laplacian_cc, il, iu, jl, ju, kl, ku, nl,
+
+  // Convert cell-centered conserved values to cell-centered 	  // Convert cell-centered conserved values to cell-centered 
+  PassiveScalarConservedToPrimitive(s_cc, u_cc, r_cc, r_cc, p	  PassiveScalarConservedToPrimitive(s_cc, u_cc, r_cc, r_cc, p
+                                    jl, ju, kl, ku);		                                    jl, ju, kl, ku);
+
+  for (int n=nl; n<=nu; ++n) {					  for (int n=nl; n<=nu; ++n) {
+    for (int k=kl; k<=ku; ++k) {				    for (int k=kl; k<=ku; ++k) {
+      for (int j=jl; j<=ju; ++j) {				      for (int j=jl; j<=ju; ++j) {
+#pragma omp simd						#pragma omp simd
+        for (int i=il; i<=iu; ++i) {				        for (int i=il; i<=iu; ++i) {
+          // Compute fourth-order approximation to cell-avera	          // Compute fourth-order approximation to cell-avera
+          r(n,k,j,i) = r_cc(n,k,j,i) + C*laplacian_cc(n,k,j,i	          r(n,k,j,i) = r_cc(n,k,j,i) + C*laplacian_cc(n,k,j,i
+          // Reapply primitive variable floors to cell-averag	          // Reapply primitive variable floors to cell-averag
+          // concentration WITHOUT correcting cell-average of	          // concentration WITHOUT correcting cell-average of
+          ApplyPassiveScalarFloors(r, k, j, i);		      |	          ApplyPassiveScalarFloors(r, n, k, j, i);
+          //ApplyPassiveScalarPrimitiveConservedFloors(s, w, 	          //ApplyPassiveScalarPrimitiveConservedFloors(s, w, 
+        }							        }
+      }								      }
+    }								    }
+  }								  }
+  return;							  return;
+}								}
+
+							      >
+//-----------------------------------------------------------	//-----------------------------------------------------------
+//! \fn void EquationOfState::PassiveScalarPrimitiveToConserv	//! \fn void EquationOfState::PassiveScalarPrimitiveToConserv
+//!           const AthenaArray<Real> &u, AthenaArray<Real> &	//!           const AthenaArray<Real> &u, AthenaArray<Real> &
+//!           int il, int iu, int jl, int ju, int kl, int ku)	//!           int il, int iu, int jl, int ju, int kl, int ku)
+//! \brief Converts primitive variables into conservative var	//! \brief Converts primitive variables into conservative var
+
+void EquationOfState::PassiveScalarPrimitiveToConserved(	void EquationOfState::PassiveScalarPrimitiveToConserved(
+    const AthenaArray<Real> &r, const AthenaArray<Real> &u,	    const AthenaArray<Real> &r, const AthenaArray<Real> &u,
+    AthenaArray<Real> &s, Coordinates *pco,			    AthenaArray<Real> &s, Coordinates *pco,
+    int il, int iu, int jl, int ju, int kl, int ku) {		    int il, int iu, int jl, int ju, int kl, int ku) {
+  for (int n=0; n<NSCALARS; ++n) {				  for (int n=0; n<NSCALARS; ++n) {
+    for (int k=kl; k<=ku; ++k) {				    for (int k=kl; k<=ku; ++k) {
+      for (int j=jl; j<=ju; ++j) {				      for (int j=jl; j<=ju; ++j) {
+#pragma omp simd						#pragma omp simd
+        for (int i=il; i<=iu; ++i) {				        for (int i=il; i<=iu; ++i) {
+          const Real &d  = u(IDN,k,j,i);			          const Real &d  = u(IDN,k,j,i);
+          //for (int n=0; n<NSCALARS; ++n) {			          //for (int n=0; n<NSCALARS; ++n) {
+          Real& s_n  = s(n,k,j,i);				          Real& s_n  = s(n,k,j,i);
+          const Real& r_n  = r(n,k,j,i);			          const Real& r_n  = r(n,k,j,i);
+          s_n = r_n * d;					          s_n = r_n * d;
+        }							        }
+      }								      }
+    }								    }
+  }								  }
+  return;							  return;
+}								}
+
+//-----------------------------------------------------------	//-----------------------------------------------------------
+//! \fn void EquationOfState::ApplyPassiveScalarFloors(Athena	//! \fn void EquationOfState::ApplyPassiveScalarFloors(Athena
+//!                                                     int k	//!                                                     int k
+//! \brief Apply species concentration floor to cell-averaged	//! \brief Apply species concentration floor to cell-averaged
+//! reconstructed L/R cell interface states (if PPM is used, 	//! reconstructed L/R cell interface states (if PPM is used, 
+//! (NSCALARS x) x1 slices					//! (NSCALARS x) x1 slices
+
+void EquationOfState::ApplyPassiveScalarFloors(AthenaArray<Re |	void EquationOfState::ApplyPassiveScalarFloors(AthenaArray<Re
+                                               int i) {		                                               int i) {
+  // TODO(felker): process user-input "hydro/sfloor" in each 	  // TODO(felker): process user-input "hydro/sfloor" in each 
+  // 8x .cpp files + more in general/. Is there a better way 	  // 8x .cpp files + more in general/. Is there a better way 
+
+  // currently, assumes same floor is applied to all NSCALARS	  // currently, assumes same floor is applied to all NSCALARS
+  // TODO(felker): generalize this to allow separate floors p	  // TODO(felker): generalize this to allow separate floors p
+  for (int n=0; n<NSCALARS; ++n) {				  for (int n=0; n<NSCALARS; ++n) {
+    Real& r_n  = r(n,i);					    Real& r_n  = r(n,i);
+    // apply (prim) dimensionless concentration floor WITHOUT	    // apply (prim) dimensionless concentration floor WITHOUT
+    // mass (conserved), unlike in floor in standard EOS	    // mass (conserved), unlike in floor in standard EOS
+    r_n = (r_n > scalar_floor_) ?  r_n : scalar_floor_;		    r_n = (r_n > scalar_floor_) ?  r_n : scalar_floor_;
+  }								  }
+  return;							  return;
+}								}
+
+// currently unused. previously, only called in above 4th ord	// currently unused. previously, only called in above 4th ord
+// PassiveScalarConservedToPrimitiveCellAverage()		// PassiveScalarConservedToPrimitiveCellAverage()
+
+void EquationOfState::ApplyPassiveScalarPrimitiveConservedFlo	void EquationOfState::ApplyPassiveScalarPrimitiveConservedFlo
+    AthenaArray<Real> &s, const AthenaArray<Real> &w, AthenaA	    AthenaArray<Real> &s, const AthenaArray<Real> &w, AthenaA
+    int k, int j, int i) {				      |	    int n, int k, int j, int i) {
+  const Real &w_d  = w(IDN,k,j,i);				  const Real &w_d  = w(IDN,k,j,i);
+  const Real di = 1.0/w_d;					  const Real di = 1.0/w_d;
+							      >	  Real& s_n  = s(n,k,j,i);
+							      >	  Real& r_n  = r(n,k,j,i);
+
+  for (int n=0; n<NSCALARS; ++n) {			      |	  s_n = (s_n < scalar_floor_*w_d) ?  scalar_floor_*w_d : s_n;
+    Real& s_n  = s(n,k,j,i);				      <
+    Real& r_n  = r(n,k,j,i);				      <
+							      <
+    s_n = (s_n < scalar_floor_*w_d) ?  scalar_floor_*w_d : s_ <
+
+    // this next line, when applied indiscriminately, erases  |	  // this next line, when applied indiscriminately, erases th
+    // in the 4th order stencils, since <r> != <s>*<1/di>, in |	  // the 4th order stencils, since <r> != <s>*<1/di>, in gene
+    r_n = s_n*di;					      |	  r_n = s_n*di;
+    // however, if r_n is riding the variable floor, it proba |	  // however, if r_n is riding the variable floor, it probabl
+    // s_n = rho*r_n is consistent (more concerned with conse |	  // s_n = rho*r_n is consistent (more concerned with conserv
+    // accuracy when quantities are floored)		      |	  // when quantities are floored)
+  }							      <
+  return;							  return;
+}								}

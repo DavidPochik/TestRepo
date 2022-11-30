@@ -1,0 +1,1 @@
+mpicxx  -O3 -std=c++11 -c src/pgen/accretion.cpp -o obj/accretion.o
