@@ -448,6 +448,7 @@ Real EquationOfState::PresFromRhoT(Real rho, Real T, Real* r) {
 
 // Putting these here just to get things to compile (These are called in HSEInnerX1/HSE2InnerX1 in accretion.cpp,
 // but I don't use either of those for my accretion problem).
+# if 0
 Real EquationOfState::TFromRhoP(Real rho, Real pres) {
   Real ye = fixed_ye;
   TempInvert(rho, LastTemp, ye, pres, EOS::iP, EosData);
@@ -460,7 +461,7 @@ Real EquationOfState::PresFromRhoT(Real rho, Real T) {
   QWData(rho, T, ye, EosData);
   return EosData(EOS::iP);
 }
-
+#endif
 
 #if 0
 void EquationOfState::SevenFromRhoT(Real rho, Real T, AthenaArray<Real> &out) {

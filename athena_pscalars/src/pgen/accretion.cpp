@@ -1150,7 +1150,7 @@ void HSEInnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
         prim(IVY,k,j,is-i) = 0.0;
         prim(IVZ,k,j,is-i) = 0.0;
         if (NON_BAROTROPIC_EOS) {
-          prim(IPR,k,j,is-i) = pmb->peos->PresFromRhoT(prim(IDN,k,j,is-i), T_eq);
+          prim(IPR,k,j,is-i) = pmb->peos->PresFromRhoT(prim(IDN,k,j,is-i), T_eq, Yeq_ptr);
         }
       }
     }
@@ -1193,6 +1193,16 @@ void HSE2InnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
   AthenaArray<Real> out1;
   out1.NewAthenaArray(7);
   Real r0 = pco->x1v(is);
+
+  Real Arr[2];
+  Double_NR(Arr,r0);
+
+  T_eq           = Arr[0];
+  Ye_eq          = Arr[1];
+  Real* Yeq_ptr  = &Ye_eq;
+  p_0            = pmb->peos->PresFromRhoT(rho_0, T_eq, Yeq_ptr);
+  dpdd_0         = pmb->peos->AsqFromRhoP(rho_0, p_0, Yeq_ptr);
+
   for (int k=ks; k<=ke; ++k) {
     // Real phi = pco->x3v(k);
     for (int j=js; j<=je; ++j) {
@@ -1204,7 +1214,7 @@ void HSE2InnerX1(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
         prim(IVY,k,j,is-i) = 0.0;
         prim(IVZ,k,j,is-i) = 0.0;
         if (NON_BAROTROPIC_EOS) {
-          prim(IPR,k,j,is-i) = pmb->peos->PresFromRhoT(prim(IDN,k,j,is-i), T_eq);
+          prim(IPR,k,j,is-i) = pmb->peos->PresFromRhoT(prim(IDN,k,j,is-i), T_eq, Yeq_ptr);
         }
       }
     }
