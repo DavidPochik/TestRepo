@@ -1,0 +1,14 @@
+Using USER inner BC 0.
+Using USER inner BC 0.
+Using USER inner BC 0.
+Using USER inner BC 0.
+Using USER inner BC 0.
+Using USER inner BC 0.
+Using USER outer BC.
+Using USER inner BC 0.
+Using IC file: Mdot0pt5_Lnu_10e51_Tau2Over3CC_AsqPatch_IC_10_10_2022.txt
+Using USER inner BC 0.
+
+Setup complete, entering main loop...
+
+cycle=0 time=0.0000000000000000e+00 dt=3.2841927024705902e-06
