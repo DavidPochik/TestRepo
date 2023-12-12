@@ -68,7 +68,7 @@ nx3 = 1
 
 <hydro>
 # Helmholtz EoS values
-eos_file_name        = helm_table.dat  # Specify EOS table filename (if used)
+eos_file_name        = ../../mhd-winds-new-EOS/helm_table.dat  # Specify EOS table filename (if used)
 eos_file_type        = helm # Specify EOS table file type [auto,ascii,binary,hdf5]
 helm_assume_defaults = true
 helm_Tfloor          = true
