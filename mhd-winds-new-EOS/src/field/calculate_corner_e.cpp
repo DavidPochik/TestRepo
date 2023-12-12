@@ -231,18 +231,51 @@ void Field::ComputeCornerE(AthenaArray<Real> &w, AthenaArray<Real> &bcc) {
 
   if (!STS_ENABLED) // add diffusion flux
     if (fdif.field_diffusion_defined) fdif.AddEMF(fdif.e_oa, e);
-
   if (pmb->loc.lx1==0) {
-    for (int k=ks; k<=ke; ++k) {
-      for (int j=js; j<=je+1; ++j) {
-        e3(k,j,is) = 0.0;
+    AthenaArray<Real>& Omega_p{pmb->pmy_mesh->ruser_mesh_data[5]};
+    AthenaArray<Real>& rot_p{pmb->pmy_mesh->ruser_mesh_data[6]};
+    //std::cout<<"In calculate corenr E Omega_p,rot_p    "<<Omega_p(0)<<"   "<<rot_p(0)<<"\n";
+    if(rot_p(0)==0.0) {
+      //std::cout<<"ENTER lab \n";
+      for (int k=ks; k<=ke; ++k) {
+        for (int j=js; j<=je+1; ++j) {
+          e3(k,j,is) = 0.0;
+          //e3(k,j,is+1) = 0.0;
       }
     }
-    for (int k=ks; k<=ke+1; ++k) {
-      for (int j=js; j<=je; ++j) {
-        e2(k,j,is) = 0.0;
-      }
-    }
+      //for (int k=ks; k<=ke+1; ++k) {
+        //for (int j=js; j<=je; ++j) {
+          //e2(k,j,is) = -Omega_p(0)*pmb->pcoord->x1v(is)*std::sin(pmb->pcoord->x2v(j))*bcc(IB1,k,j,is);
+      //}
+    //}
+      //for (int k=ks; k<=ke+1; ++k) {
+        //for (int j=js; j<=je+1; ++j) {
+          //e1(k,j,is) = 0.0;
+      //}
+    //}
+   }
+
+   //else {
+
+    //for (int k=ks; k<=ke; ++k) {
+      //for (int j=js; j<=je+1; ++j) {
+        //e3(k,j,is) = 0.0;
+        
+      //}
+    //}
+    //for (int k=ks; k<=ke+1; ++k) {
+      //for (int j=js; j<=je; ++j) {
+        //e2(k,j,is) = 0.0;
+        
+      //}
+    //}
+    //for (int k=ks; k<=ke+1; ++k) {
+      //for (int j=js; j<=je+1; ++j) {
+        //e1(k,j,is) = 0.0;
+        
+      //}
+    //}
+   //}
   }
   return;
 }

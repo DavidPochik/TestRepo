@@ -19,16 +19,21 @@
 #include "../../hydro.hpp"
 
 //----------------------------------------------------------------------------------------
+//! \fn void Hydro::RiemannSolver
+//! \brief The HLLE Riemann solver for adiabatic magnetohydrodynamics
 
 void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
                           const int ivx, const AthenaArray<Real> &bx,
                           AthenaArray<Real> &wl, AthenaArray<Real> &wr,
                           AthenaArray<Real> &flx,
                           AthenaArray<Real> &ey, AthenaArray<Real> &ez,
-                          AthenaArray<Real> &wct, const AthenaArray<Real> &dxw) {
+                          AthenaArray<Real> &wct, const AthenaArray<Real> &dxw,
+                          AthenaArray<Real> &rl, AthenaArray<Real> &rr,
+                          AthenaArray<Real> &sflx) {
   int ivy = IVX + ((ivx-IVX)+1)%3;
   int ivz = IVX + ((ivx-IVX)+2)%3;
-  Real wli[(NWAVE)], wri[(NWAVE)], wroe[(NWAVE)];
+  Real wli[(NWAVE+NSCALARS*GENERAL_EOS)],wri[(NWAVE+NSCALARS*GENERAL_EOS)];
+  Real wroe[(NWAVE)];
   Real fl[(NWAVE)],fr[(NWAVE)],flxi[(NWAVE)];
 
   Real gm1 = pmy_block->peos->GetGamma() - 1.0;
@@ -54,6 +59,13 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     if (NON_BAROTROPIC_EOS) wri[IPR]=wr(IPR,i);
     wri[IBY]=wr(IBY,i);
     wri[IBZ]=wr(IBZ,i);
+
+    if (GENERAL_EOS) {
+      for (int n=0; n<NSCALARS; ++n) {
+        wli[NWAVE+n]=rl(n,i);
+        wri[NWAVE+n]=rr(n,i);
+      }
+    }
 
     Real bxi = bx(k,j,i);
 
@@ -175,6 +187,13 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     ez(k,j,i) =  flxi[IBZ];
 
     wct(k,j,i)=GetWeightForCT(flxi[IDN], wli[IDN], wri[IDN], dxw(i), dt);
+
+    for (int n=0; n<NSCALARS; n++) {
+      if (flx(IDN,k,j,i) >= 0.0)
+        sflx(n,k,j,i) = flx(IDN,k,j,i) * rl(n,i);
+      else
+        sflx(n,k,j,i) = flx(IDN,k,j,i) * rr(n,i);
+    }
   }
   return;
 }

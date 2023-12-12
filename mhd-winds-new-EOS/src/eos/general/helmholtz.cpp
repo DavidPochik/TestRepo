@@ -25,26 +25,73 @@
 #include "../../utils/interp_table.hpp"
 #include "../eos.hpp"
 
-static const Real forth=4.0/3.0, third=1.0/3.0;
-//static const Real avo=6.0221417930e23, kerg=1.380650424e-16, clight=2.99792458e10,
-//                  ssol=5.6704e-5;//, amu=1.66053878283e-24, h=6.6260689633e-27;
-static const Real ssol=5.6704e-5;
-static const Real qe=4.8032042712e-10, avo=6.0221417930e23, clight=2.99792458e10,
-                  kerg=1.380650424e-16;
-static const Real asol=4.0*ssol/clight, light2=clight*clight;
-static const Real asoli3=asol/3.0;
-//static const Real kergavo=kerg*avo, sioncon = (2.0 * PI * amu * kerg)/(h*h)
+namespace {
+  const Real third2 = 1.0 / 3.0;
+  const Real c = 2.99792458e10;
+  const Real k = 1.380649e-16;
+  const Real mn = 1.6726e-24;
+  const Real hbar = 6.62607015e-27/(2.0*PI);
+  const Real c3 = std::pow(k/(hbar*c),3);
+  const Real con3 = (11.0*PI*PI/180.0)*c3*k;
+  const Real Tmin=1e3;
+  const Real Tmax=1e15;
+  const Real kmn=k/mn;
+  const Real thel= 30.0/11.0;
+  const Real fiel= 15.0/11.0;
+  const Real eta_den_const = std::pow(6.0,2.0*third2);
+}
+Real PorE(Real rho, Real T, Real Ye, int index) {
+  Real vol = mn/rho;
+  Real T4 = T*T*T*T;
+  Real a = c3*std::pow(T,3.0)*vol*(PI/3.0);
+  Real a2 = SQR(a);
+  Real a4 = SQR(a2);
+  Real a6 = a2 * a4;
+  Real y2 = SQR(Ye);
+  Real b = std::sqrt(4.0*a6+27.0*a4*y2);
+  Real term = std::pow(9.0*a2*Ye+std::pow(3.0,0.5)*b, third2);
+  Real eta = (std::pow(2.0,third2)/eta_den_const)*term/a - (2.0*std::pow(3.0,third2)/eta_den_const)*a/term; // actually eta/pi
 
-// constants for the uniform background coulomb correction
-static const Real a1=-0.898004, b1=0.96786, c1=0.220703, d1=-0.86097, e1=2.5269,
-                  a2=0.29561, b2=1.9885, c2=0.288675;
-//static const Real qe=4.8032042712e-10;
-static const Real esqu=qe*qe;
+  Real eta2 = SQR(eta);
+
+  Real eta4 = SQR(eta2);
+
+  Real con= con3*(1.0+thel*eta2 + fiel*eta4);
+  Real p0 = rho*kmn*T;
+  if (index == 2) {
+    return con*T4 + p0;
+  } else if (index == 0) {
+    return 3.0*con*T4 + 1.5*p0;
+  }
+  std::cout<<"Incorrect index in PorE \n";
+  return 0;
+}
+
+
+
+namespace HelmholtzConstants {
+  const int nOut = 8;
+  const Real forth=4.0/3.0, third=1.0/3.0;
+  //const Real avo=6.0221417930e23, kerg=1.380650424e-16, clight=2.99792458e10,
+  //                  ssol=5.6704e-5;//, amu=1.66053878283e-24, h=6.6260689633e-27;
+  const Real ssol=5.6704e-5;
+  const Real qe=4.8032042712e-10, avo=6.0221417930e23, clight=2.99792458e10,
+                    kerg=1.380650424e-16;
+  const Real asol=4.0*ssol/clight, light2=clight*clight;
+  const Real asoli3=asol/3.0;
+  //const Real kergavo=kerg*avo, sioncon = (2.0 * PI * amu * kerg)/(h*h)
+
+  // constants for the uniform background coulomb correction
+  const Real a1=-0.898004, b1=0.96786, c1=0.220703, d1=-0.86097, e1=2.5269,
+                    a2=0.29561, b2=1.9885, c2=0.288675;
+  //const Real qe=4.8032042712e-10;
+  const Real esqu=qe*qe;
+} // namespace HelmholtzConstants
 
 class HelmTable {
  public:
   int jmax, imax;
-  Real tlo, thi, tstp, tstpi, dlo, dhi, dstp, dstpi, abar, zbar, ytot1, ye;
+  Real tlo, thi, tstp, tstpi, dlo, dhi, dstp, dstpi;
   HelmTable(ParameterInput *pin, EosTable *ptable) {
     jmax = ptable->nEgas;
     tlo   = ptable->logEgasMin;
@@ -114,10 +161,6 @@ class HelmTable {
     prec = pin->GetOrAddReal("hydro", "helm_prec", 1e-8);
     nmax = pin->GetOrAddInteger("hydro", "helm_nmax", 5000);
     Tfloor = pin->GetOrAddBoolean("hydro", "helm_Tfloor", false);
-    abar = pin->GetReal("hydro", "helm_abar");
-    zbar = pin->GetReal("hydro", "helm_zbar");
-    ytot1 = 1.0/abar;
-    ye = std::max(1.0e-16, ytot1 * zbar);
 
     fi.NewAthenaArray(36);
     // helmholtz free energy and its derivatives
@@ -140,11 +183,22 @@ class HelmTable {
     xfd.InitWithShallowSlice(ptable->table.data, 3, 14, 1);
     xft.InitWithShallowSlice(ptable->table.data, 3, 15, 1);
     xfdt.InitWithShallowSlice(ptable->table.data, 3, 16, 1);
+
+   // electron chemical potential table
+    ef.InitWithShallowSlice(ptable->table.data, 3, 17, 1);
+    efd.InitWithShallowSlice(ptable->table.data, 3, 18, 1);
+    eft.InitWithShallowSlice(ptable->table.data, 3, 19, 1);
+    efdt.InitWithShallowSlice(ptable->table.data, 3, 20, 1);
+
   }
 
-// OutData has length 7
-  void HelmLookupRhoT(Real den, Real temp, AthenaArray<Real> &OutData) {
+// OutData has length 9 (HelmholtzConstants::nOut)
+  void HelmLookupRhoT(Real den, Real temp, Real ye, Real abar,
+                      AthenaArray<Real> &OutData) {
+    using namespace HelmholtzConstants;  // NOLINT (build/namespace)
     Real din = ye * den;
+    Real ytot1 = 1.0/abar;
+    Real zbar = ye * abar;
     //hash locate this temperature and density
     int jat = static_cast<int>((std::log10(temp) - tlo)*tstpi);
     jat = std::max(0,std::min(jat,jmax-1));
@@ -408,8 +462,30 @@ class HelmTable {
     Real dpepdd = h3(fi, si0t, si1t, si0mt, si1mt, si0d, si1d, si0md, si1md);
     dpepdd = std::max(ye * dpepdd, 1.0e-30);
 
-    // skipping vvv
+
     // look in the electron chemical potential table only once
+    //std::cout<<"Seg fault after this \n";
+    fi(0)  = ef(iat,jat);
+    fi(1)  = ef(iat+1,jat);
+    fi(2)  = ef(iat,jat+1);
+    fi(3)  = ef(iat+1,jat+1);
+    fi(4)  = eft(iat,jat);
+    fi(5)  = eft(iat+1,jat);
+    fi(6)  = eft(iat,jat+1);
+    fi(7)  = eft(iat+1,jat+1);
+    fi(8)  = efd(iat,jat);
+    fi(9) = efd(iat+1,jat);
+    fi(10) = efd(iat,jat+1);
+    fi(11) = efd(iat+1,jat+1);
+    fi(12) = efdt(iat,jat);
+    fi(13) = efdt(iat+1,jat);
+    fi(14) = efdt(iat,jat+1);
+    fi(15) = efdt(iat+1,jat+1);
+
+
+   //electron chemical potential etaele
+    Real etaele  = h3(fi, si0t, si1t, si0mt, si1mt, si0d, si1d, si0md, si1md);
+
     //
     // look in the number density table only once
     // skipping ^^^
@@ -470,7 +546,7 @@ class HelmTable {
     Real plasgda  = z * lamida;
     Real plasgdt  = -plasg*ktinv * kerg;
     Real plasgdz  = 2.0 * plasg/zbar;
-
+    //if(ye<1e-16){std::cout<<"Plasgdz in helmlookup   "<<ye<<"     "<<plasg<<"      "<<plasgdz<<"\n";};
     Real ecoul, pcoul, scoul, decouldd, decouldt, decoulda, decouldz, dpcouldd, dpcouldt,
     dpcoulda, dpcouldz, dscouldd, dscouldt, dscoulda, dscouldz;
     // yakovlev & shalybkov 1989 equations 82, 85, 86, 87
@@ -659,19 +735,40 @@ class HelmTable {
     OutData(4) = asq;
     OutData(5) = temp;
     OutData(6) = dpresdd;
-    OutData(7) = -1.0; // MSBC: I just put a dummy value here to make it 7 values
+    OutData(7) = etaele;
   }
 
   // index = 0 for internal energy; index = 2 for pressure; var = int energy or pressure
-  void HelmInvert(Real rho, Real GuessTemp, Real var, int index,
+  void HelmInvert(Real rho, Real GuessTemp, Real ye, Real abar, Real var, int index,
                   AthenaArray<Real> &OutData) {
+  if ((std::isnan(var)) || (std::isnan(rho)) || (std::isnan(GuessTemp))) {
+      const char *varnames[] = {"e_int", "de_int/dT", "P_gas", "dP/dT", "a^2", "T"};
+      printf("ERR (%s): %.4e, rho: %.4e,  Temp: %.4e   Ye: %.4e \n", varnames[index],var,rho,
+             GuessTemp,ye);
+
+      std::stringstream msg;
+      msg <<"Nan in root find (var) \n";
+      ATHENA_ERROR(msg);
+    }
+  if ((var<=0.0) || (rho<=0.0)) {
+      const char *varnames[] = {"e_int", "de_int/dT", "P_gas", "dP/dT", "a^2", "T"};
+      printf("ERR (%s): %.4e, rho: %.4e,  Temp: %.4e \n", varnames[index],var,rho,
+             GuessTemp);
+
+      std::stringstream msg;
+      msg <<"Negative var\n";
+      ATHENA_ERROR(msg);
+  }
+
+
+
     Real BrakT[] = {t(0), t(jmax-1)};
     Real BrakVal[] = {0, 0};
     Real InvVar = 1.0 / var;
     Real error = 9e9;
     int nlim = nmax;
     Real LastTemp = BrakT[0];
-    HelmLookupRhoT(rho, LastTemp, OutData);
+    HelmLookupRhoT(rho, LastTemp, ye, abar, OutData);
     BrakVal[0] = OutData(index) * InvVar - 1.0;
     Real LastErr = BrakVal[0];
     Real delta;
@@ -681,13 +778,17 @@ class HelmTable {
 #endif
     while (std::abs(error) > prec) {
       if (BrakVal[0] > 0) {//}* BrakVal[1] > 0) {
-        HelmLookupRhoT(rho, BrakT[0], OutData);
+        HelmLookupRhoT(rho, BrakT[0], ye, abar, OutData);
         Real low = OutData(index);
         // If we've specified Tfloor and we are below Tmin just use Tmin and return
-        if (Tfloor && var < low) {
-          return;
+        if (var < low) {
+           Real rtemp=1e3;
+           HelmLookupRhoT(rho, rtemp, ye, abar, OutData);
+
+           return;
+
         }
-        HelmLookupRhoT(rho, BrakT[1], OutData);
+        HelmLookupRhoT(rho, BrakT[1], ye, abar, OutData);
         Real high =  OutData(index);
         std::stringstream msg;
         const char *varnames[] = {"e_int", "de_int/dT", "P_gas", "dP/dT", "a^2", "T"};
@@ -702,11 +803,12 @@ class HelmTable {
       if ((GuessTemp <= BrakT[0]) || (GuessTemp >= BrakT[1])) {
         //GuessTemp = 0.5 * (BrakT[0] + BrakT[1]);
         GuessTemp = std::sqrt(BrakT[0] * BrakT[1]);
+        if(std::isnan(GuessTemp)){ std::cout<<"Nan guess in invert \n";}
 #ifdef MYDEBUG1
         mode = 1;
 #endif
       }
-      HelmLookupRhoT(rho, GuessTemp, OutData);
+      HelmLookupRhoT(rho, GuessTemp, ye, abar, OutData);
       error = OutData(index) * InvVar - 1.0;
 #ifdef MYDEBUG1
       printf("%04d [%.4g, %.4g, %.4g]; %.4g| %d\n", 1000 - nlim, BrakT[0], GuessTemp,
@@ -721,13 +823,16 @@ class HelmTable {
         BrakVal[1] = error;
       }
       if (BrakT[1] <= BrakT[0]) {
-        HelmLookupRhoT(rho, BrakT[0], OutData);
+        HelmLookupRhoT(rho, BrakT[0], ye, abar, OutData);
         Real low = OutData(index);
         // If we've specified Tfloor and we are below Tmin just use Tmin and return
-        if (Tfloor && var < low) {
-          return;
+        if (var < low) {
+           Real rtemp=1e3;
+           HelmLookupRhoT(rho, rtemp, ye, abar, OutData);
+           return;
+
         }
-        HelmLookupRhoT(rho, BrakT[1], OutData);
+        HelmLookupRhoT(rho, BrakT[1], ye, abar, OutData);
         Real high = OutData(index);
         std::stringstream msg;
         const char *varnames[] = {"e_int", "de_int/dT", "P_gas", "dP/dT", "a^2", "T"};
@@ -751,14 +856,15 @@ class HelmTable {
         // Newton–Raphson step
         delta = var * error / OutData(index + 1);
         GuessTemp -= delta;
+        if(std::isnan(GuessTemp)){std::cout<<"Nan GT in NR "<<var<<"    "<<error<<"     "<<OutData(index + 1)<< "\n";}
 #ifdef MYDEBUG1
         mode = 3;
 #endif
       }
       if (nlim-- < 0) {
-        HelmLookupRhoT(rho, BrakT[0], OutData);
+        HelmLookupRhoT(rho, BrakT[0], ye, abar, OutData);
         Real low = OutData(index);
-        HelmLookupRhoT(rho, BrakT[1], OutData);
+        HelmLookupRhoT(rho, BrakT[1], ye, abar, OutData);
         Real high = OutData(index);
         const char *varnames[] = {"e_int", "de_int/dT", "P_gas", "dP/dT", "a^2", "T"};
         printf("ERR (%s): |%.4e|, |%.4e| > %.4e; %d iterations\n", varnames[index],
@@ -777,6 +883,13 @@ class HelmTable {
           << std::endl << "Cannot converge. Recovered T off table." << std::endl;
       ATHENA_ERROR(msg);
     }
+   if (std::isnan(OutData(5))) {
+      std::stringstream msg;
+      msg << "Nan returned in root find (HelmInvert)"
+          << std::endl << "Message from end of HelmInvert" << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
     return;
   }
 
@@ -786,6 +899,7 @@ class HelmTable {
   bool Tfloor;
   AthenaArray<Real> f, ft, ftt, fd, fdd, fdt, fddt, fdtt, fddtt, fi;
   AthenaArray<Real> dpdf, dpdft, dpdfd, dpdfdt;
+  AthenaArray<Real> ef, efd, eft, efdt;
   AthenaArray<Real> xf, xft, xfd, xfdt;
   AthenaArray<Real> t, d, dt_sav, dt2i_sav, dti_sav, ddi_sav, dd_sav, dd2_sav, dt2_sav,
                     dd2i_sav;
@@ -875,66 +989,211 @@ class HelmTable {
          + data(10) * w1d * w0mt + data(11) * w1md * w0mt
          + data(12) * w1d * w1t  + data(13) * w1md * w1t
          + data(14) * w1d * w1mt + data(15) * w1md * w1mt;
-         }
+  }
 };
 
 namespace {
-  HelmTable* phelm;
+  HelmTable* phelm = nullptr;
   AthenaArray<Real> EosData;
   Real LastTemp;
+  Real fixed_ye = -1.0;
+  Real fixed_abar = -1.0;
+  int i_ye = -1;
+  int i_abar = -1;
+  int i_temp = -1;
 }
 
 //----------------------------------------------------------------------------------------
 //! \fn Real EquationOfState::PresFromRhoEg(Real rho, Real egas)
 //  \brief Return gas pressure
-Real EquationOfState::PresFromRhoEg(Real rho, Real egas) {
-  //phelm->HelmLookupRhoT(rho, egas, EosData);
-  //std::cout << "PresFromRhoEg" << '\n';
+Real EquationOfState::PresFromRhoEg(Real rho, Real egas, Real* s) {
+  Real ye = fixed_ye;
+  Real abar = fixed_abar;
+  Real temp = LastTemp;
+  if (NSCALARS > 0 && i_ye >= 0) {
+    ye = s[i_ye] / rho;
+  }
+  if (NSCALARS > 0 && i_abar >= 0) {
+    abar = s[i_abar] / rho;
+  }
+  if (NSCALARS > 0 && i_temp >= 0) {
+    temp = s[i_temp] / rho;
+  }
+
 #ifdef TEST1
   phelm->HelmLookupRhoT(rho * rho_unit_, 1e3, EosData);
   if (egas < EosData(0) * inv_egas_unit_) {
     return EosData(0) * inv_egas_unit_;
   }
 #endif
-  phelm->HelmInvert(rho * rho_unit_, LastTemp, egas * egas_unit_, 0, EosData);
+  phelm->HelmInvert(rho * rho_unit_, temp, ye, abar, egas * egas_unit_, 0, EosData);
   LastTemp = EosData(5);
+  if (NSCALARS > 0 && i_temp >= 0) {
+    s[i_temp] = LastTemp * rho;
+  }
   return EosData(2) * inv_egas_unit_;
 }
 
 //----------------------------------------------------------------------------------------
 //! \fn Real EquationOfState::EgasFromRhoP(Real rho, Real pres)
 //  \brief Return internal energy density
-Real EquationOfState::EgasFromRhoP(Real rho, Real pres) {
+Real EquationOfState::EgasFromRhoP(Real rho, Real pres, Real* r) {
   //phelm->HelmLookupRhoT(rho, pres, EosData);
   //std::cout << "EgasFromRhoP" << '\n';
+  Real ye = fixed_ye;
+  Real abar = fixed_abar;
+  Real temp = LastTemp;
+  if (NSCALARS > 0 && i_ye >= 0) {
+    ye = r[i_ye];
+  }
+  if (NSCALARS > 0 && i_abar >= 0) {
+    abar = r[i_abar];
+  }
+  if (NSCALARS > 0 && i_temp >= 0) {
+    temp = r[i_temp];
+  }
+
 #ifdef TEST1
   phelm->HelmLookupRhoT(rho * rho_unit_, 1e3, EosData);
   if (pres < EosData(2) * inv_egas_unit_) {
     return EosData(0) * inv_egas_unit_;
   }
 #endif
-  phelm->HelmInvert(rho * rho_unit_, LastTemp, pres * egas_unit_, 2, EosData);
+  phelm->HelmInvert(rho * rho_unit_, temp, ye, abar, pres * egas_unit_, 2, EosData);
   LastTemp = EosData(5);
+  if (NSCALARS > 0 && i_temp >= 0) {
+    r[i_temp] = LastTemp;
+  }
   return EosData(0) * inv_egas_unit_;
 }
 
 //----------------------------------------------------------------------------------------
 //! \fn Real EquationOfState::AsqFromRhoP(Real rho, Real pres)
 //  \brief Return adiabatic sound speed squared
-Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
+Real EquationOfState::AsqFromRhoP(Real rho, Real pres, const Real* r) {
   //phelm->HelmLookupRhoT(rho, pres, EosData);
-  //std::cout << "AsqFromRhoP" << '\n';
+
+  Real ye = fixed_ye;
+  Real abar = fixed_abar;
+  Real temp = LastTemp;
+  if (NSCALARS > 0 && i_ye >= 0) {
+    ye = r[i_ye];
+  }
+  if (NSCALARS > 0 && i_abar >= 0) {
+    abar = r[i_abar];
+  }
+  if (NSCALARS > 0 && i_temp >= 0) {
+    temp = r[i_temp];
+  }
+
+
 #ifdef TEST1
   phelm->HelmLookupRhoT(rho * rho_unit_, 1e3, EosData);
   if (pres < EosData(2) * inv_egas_unit_) {
     return EosData(4) * inv_vsqr_unit_;
   }
 #endif
-  phelm->HelmInvert(rho * rho_unit_, LastTemp, pres * egas_unit_, 2, EosData);
+
+  phelm->HelmInvert(rho * rho_unit_, temp, ye, abar, pres * egas_unit_, 2, EosData);
   LastTemp = EosData(5);
+
+
+
+
   return EosData(4) * inv_vsqr_unit_;
 }
 
+Real EquationOfState::PresFromRhoT(Real rho, Real T, Real* r) {
+  Real ye = fixed_ye;
+  Real abar = fixed_abar;
+  if (NSCALARS > 0 && i_ye >= 0) {
+    ye = r[i_ye];
+  }
+
+
+  phelm->HelmLookupRhoT(rho, T, ye, abar, EosData);
+  return EosData(2)* inv_egas_unit_;
+}
+
+
+Real EquationOfState::EtaFromRhoT(Real rho, Real T, Real* r) {
+  Real ye = fixed_ye;
+  Real abar = fixed_abar;
+  if (NSCALARS > 0 && i_ye >= 0) {
+    ye = r[i_ye];
+  }
+  phelm->HelmLookupRhoT(rho, T, ye, abar, EosData);
+  return EosData(7);
+}
+
+Real EquationOfState::TFromRhoP(Real rho, Real pres, Real* r) {
+  Real ye = fixed_ye;
+  Real abar = fixed_abar;
+  Real temp = LastTemp;
+  if (NSCALARS > 0 && i_ye >= 0) {
+    ye = r[i_ye];
+  }
+
+
+  if (NSCALARS > 0 && i_temp >= 0) {
+    temp = r[i_temp];
+  }
+
+  phelm->HelmInvert(rho * rho_unit_, temp, ye, abar, pres * egas_unit_, 2, EosData);
+  LastTemp = EosData(5);
+  if (NSCALARS > 0 && i_temp >= 0) {
+    r[i_temp] = LastTemp;
+  }
+
+  return LastTemp;
+}
+
+Real EquationOfState::TFromRhoEgas(Real rho, Real egas, Real* s) {
+  Real ye = fixed_ye;
+  Real abar = fixed_abar;
+  Real temp=LastTemp;
+  if (NSCALARS > 0 && i_ye >= 0) {
+    ye = s[i_ye] / rho;
+  }
+
+  if (NSCALARS > 0 && i_temp >= 0) {
+    temp = s[i_temp]/rho;
+  }
+  phelm->HelmInvert(rho * rho_unit_, temp, ye, abar, egas * egas_unit_, 0, EosData);
+  LastTemp = EosData(5);
+  if (NSCALARS > 0 && i_temp >= 0) {
+    s[i_temp] = LastTemp*rho;
+  }
+
+  return LastTemp;
+}
+
+
+Real EquationOfState::GetEgasFloor(Real rho, Real* s) {
+  Real ye = fixed_ye;
+  Real abar = fixed_abar;
+  if (NSCALARS > 0 && i_ye >= 0) {
+    ye = s[i_ye] / rho;
+  }
+
+  phelm->HelmLookupRhoT(rho, 1e3, ye, abar, EosData);
+  return EosData(2) * inv_egas_unit_;
+
+}
+
+Real EquationOfState::GetPresFloor(Real rho, Real* r) {
+  Real ye = fixed_ye;
+  Real abar = fixed_abar;
+  if (NSCALARS > 0 && i_ye >= 0) {
+    ye = r[i_ye];
+  }
+  phelm->HelmLookupRhoT(rho, 1e3, ye, abar, EosData);
+  return EosData(0) * inv_egas_unit_;
+
+}
+
+
+#if 0
 // MSBC: I can't remember why we chose 7 here
 void EquationOfState::SevenFromRhoT(Real rho, Real T, AthenaArray<Real> &out) {
   phelm->HelmLookupRhoT(rho * rho_unit_, T, out);
@@ -964,14 +1223,97 @@ Real EquationOfState::TFromRhoEgas(Real rho, Real egas) {
   LastTemp = EosData(5);
   return LastTemp;
 }
+#endif
 
 //----------------------------------------------------------------------------------------
 //! void EquationOfState::InitEosConstants(ParameterInput* pin)
 //  \brief Initialize constants for EOS
 void EquationOfState::InitEosConstants(ParameterInput *pin) {
-  phelm = new HelmTable(pin, ptable);
-  EosData.NewAthenaArray(7);
+
+  std::cout<<"Using Matts's HelmEOS \n";
+  if (!phelm) phelm = new HelmTable(pin, ptable);
+
   LastTemp = std::pow(10.0, 0.5 * (phelm->tlo + phelm->thi));
+  if (pin->DoesParameterExist("hydro", "helm_abar")) {
+    fixed_abar = pin->GetReal("hydro", "helm_abar");
+  }
+  if (pin->DoesParameterExist("hydro", "helm_ye")) {
+    std::cout<<"Using fixed Ye in HEOS \n";
+    fixed_ye = pin->GetReal("hydro", "helm_ye");
+  } else if (pin->DoesParameterExist("hydro", "helm_zbar")) {
+    if (fixed_abar < 0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
+          << "hydro/helm_abar must be specified if hydro/helm_zbar is." << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    fixed_ye = std::max(1.0e-16, pin->GetReal("hydro", "helm_zbar") / fixed_abar);
+  }
+  if (NSCALARS==0 && std::min(fixed_abar, fixed_ye) < 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
+        << "helm_abar and helm_ye (or helm_zbar) must be specified if NSCALARS=0."
+        << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  if (pin->DoesParameterExist("hydro", "helm_ye_index")) {
+    std::cout<<"Using Ye passive scalars in HEOS \n";
+    i_ye = pin->GetInteger("hydro", "helm_ye_index");
+    if (i_ye < 0 || i_ye >= NSCALARS) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
+          << "hydro/helm_ye_index must be between 0 and NSCALARS (" << NSCALARS << ")."
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+  }
+  if (pin->DoesParameterExist("hydro", "helm_abar_index")) {
+    i_abar = pin->GetInteger("hydro", "helm_abar_index");
+    if (i_abar < 0 || i_abar >= NSCALARS) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
+          << "hydro/helm_abar_index must be between 0 and NSCALARS (" << NSCALARS << ")."
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    if (i_abar == i_ye) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
+          << "hydro/helm_abar_index must be different from hydro/helm_ye_index."
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    if (fixed_ye < 0 && i_ye < 0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
+          << "either hydro/helm_ye or hydro/helm_ye_index must be specified."
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    if (fixed_abar < 0 && i_abar < 0) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
+          << "either hydro/helm_abar or hydro/helm_abar_index must be specified."
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    }
+    if (pin->DoesParameterExist("hydro", "helm_temp_index")) {
+      i_temp = pin->GetInteger("hydro", "helm_temp_index");
+      std::cout<<"Using Temp passive scalars in HELMEOS\n";
+      if (i_temp < 0 || i_temp >= NSCALARS) {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in EquationOfState::InitEosConstants" << std::endl
+            << "hydro/helm_temp_index must be between 0 and NSCALARS ("
+            << NSCALARS << ")."
+            << std::endl;
+        ATHENA_ERROR(msg);
+      }
+    }
+  EosData.NewAthenaArray(HelmholtzConstants::nOut);
+  phelm->HelmLookupRhoT(1e12, 4.64e11,0.05,1.0, EosData);
+  std::cout<<"In HEOS Eta   "<<EosData(7)<<"\n";
+
   ///////////////////
   // test
 #ifdef MAINTEST
@@ -1094,3 +1436,4 @@ void EquationOfState::InitEosConstants(ParameterInput *pin) {
   //////////////////
   return;
 }
+

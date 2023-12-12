@@ -1,0 +1,426 @@
+Using USER outer BC.
+Using USER inner BC 0.
+Using IC file: Lnu_10e51_Mdot_0.7_RPNS_30km_firststep.txt
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+t = 0, using default rho0
+
+Setup complete, entering main loop...
+
+cycle=0 time=0.0000000000000000e+00 dt=3.9171261734311365e-06
+time = 0s or ncycle < 1, using default rho0
+cycle=1000 time=3.6644350815297731e-03 dt=3.7771102774997826e-06
+cycle=2000 time=7.3845978357069859e-03 dt=3.7147599915947520e-06
+cycle=3000 time=1.1142062208779545e-02 dt=3.7925004716763810e-06
+cycle=4000 time=1.4928945381692833e-02 dt=3.7857908387479524e-06
+cycle=5000 time=1.8717430842035036e-02 dt=3.7913876444793024e-06
+cycle=6000 time=2.2507775457513257e-02 dt=3.7888745128908751e-06
+cycle=7000 time=2.6296275964913785e-02 dt=3.7887004938873193e-06
+cycle=8000 time=3.0085689977531575e-02 dt=3.7899376232031487e-06
+cycle=9000 time=3.3873952906974571e-02 dt=3.7867170178687038e-06
+cycle=10000 time=3.7661122687171013e-02 dt=3.7877113560772391e-06
+cycle=11000 time=4.1448701837974285e-02 dt=3.7872548594319453e-06
+cycle=12000 time=4.5235971599422387e-02 dt=3.7875267567911286e-06
+cycle=13000 time=4.9023430365134527e-02 dt=3.7873687483932106e-06
+cycle=14000 time=5.2812693951547217e-02 dt=3.7916784497456348e-06
+cycle=15000 time=5.6604577574614331e-02 dt=3.7911574632754214e-06
+too big
+ncycle  = 1.6000000000000000e+04
+rho_new = 4.8042175342072900e+11 g/cm^3
+active  = 3.7505413444285492e+11 g/cm^3
+tau     = 7.4141521673068034e-01
+time    = 6.0394966928895850e-02 s
+cycle=16000 time=6.0394966928895850e-02 dt=3.7899782588071079e-06
+cycle=17000 time=6.4167377064595896e-02 dt=3.7721784052413362e-06
+cycle=18000 time=6.7943585719692209e-02 dt=3.7790209875015453e-06
+cycle=19000 time=7.1720162603324672e-02 dt=3.7733732211898115e-06
+cycle=20000 time=7.5495677027690514e-02 dt=3.7763853683669853e-06
+cycle=21000 time=7.9272683993677442e-02 dt=3.7767686848021909e-06
+cycle=22000 time=8.3048743176367082e-02 dt=3.7756931881495525e-06
+cycle=23000 time=8.6824852293924698e-02 dt=3.7764292883313478e-06
+cycle=24000 time=9.0601159319172647e-02 dt=3.7760655598682327e-06
+cycle=25000 time=9.4377109142069288e-02 dt=3.7759758644329249e-06
+cycle=26000 time=9.8153179287677583e-02 dt=3.7760810126820020e-06
+cycle=27000 time=1.0192915513532189e-01 dt=3.7758876576691968e-06
+cycle=28000 time=1.0570504434639476e-01 dt=3.7759132321589833e-06
+cycle=29000 time=1.0948094334378125e-01 dt=3.7758567979943430e-06
+cycle=30000 time=1.1325675730998312e-01 dt=3.7757905941810828e-06
+cycle=31000 time=1.1703254507090639e-01 dt=3.7757783938673408e-06
+too big
+ncycle  = 3.2000000000000000e+04
+rho_new = 4.6600910081810712e+11 g/cm^3
+active  = 3.6350809821562390e+11 g/cm^3
+tau     = 7.1945357840982271e-01
+time    = 1.2080829476894782e-01 s
+cycle=32000 time=1.2080829476894782e-01 dt=3.7757195711332155e-06
+cycle=33000 time=1.2454423945691054e-01 dt=3.7159244541160103e-06
+cycle=34000 time=1.2826017623559960e-01 dt=3.7159488975168888e-06
+cycle=35000 time=1.3197613691466090e-01 dt=3.7159723421072728e-06
+cycle=36000 time=1.3569212057965607e-01 dt=3.7159948333305528e-06
+cycle=37000 time=1.3940812621348961e-01 dt=3.7160163063422497e-06
+cycle=38000 time=1.4312415297739356e-01 dt=3.7160372141858371e-06
+cycle=39000 time=1.4684020072601695e-01 dt=3.7160584349743120e-06
+cycle=40000 time=1.5055627019469253e-01 dt=3.7160807387603426e-06
+cycle=41000 time=1.5427236254889748e-01 dt=3.7161040860901562e-06
+cycle=42000 time=1.5798847828361104e-01 dt=3.7161272286653892e-06
+cycle=43000 time=1.6170461623196511e-01 dt=3.7161481184604519e-06
+cycle=44000 time=1.6542077302621272e-01 dt=3.7161646120301578e-06
+cycle=45000 time=1.6913694354441891e-01 dt=3.7161754592312215e-06
+cycle=46000 time=1.7285312207050660e-01 dt=3.7161807492312549e-06
+cycle=47000 time=1.7656930360192252e-01 dt=3.7161817441335203e-06
+too big
+ncycle  = 4.8000000000000000e+04
+rho_new = 4.5202882779356390e+11 g/cm^3
+active  = 3.5235999092940228e+11 g/cm^3
+tau     = 6.9810839215537535e-01
+time    = 1.8028548473155953e-01 s
+cycle=48000 time=1.8028548473155953e-01 dt=3.7161802504141964e-06
+cycle=49000 time=1.8400046015989521e-01 dt=3.7161787332110954e-06
+cycle=50000 time=1.8771663813293996e-01 dt=3.7161769546132799e-06
+cycle=51000 time=1.9143281410769580e-01 dt=3.7161752002524073e-06
+cycle=52000 time=1.9514898892784699e-01 dt=3.7161745671842503e-06
+cycle=53000 time=1.9886516336845997e-01 dt=3.7161743399399417e-06
+cycle=54000 time=2.0258133765890252e-01 dt=3.7161742688098070e-06
+cycle=55000 time=2.0629751194671048e-01 dt=3.7161743152871393e-06
+cycle=56000 time=2.1001368628764722e-01 dt=3.7161743620517004e-06
+cycle=57000 time=2.1372986065854621e-01 dt=3.7161743778271643e-06
+cycle=58000 time=2.1744603504087406e-01 dt=3.7161743849329966e-06
+cycle=59000 time=2.2116220942595222e-01 dt=3.7161743844099109e-06
+cycle=60000 time=2.2487838380899974e-01 dt=3.7161743817474937e-06
+cycle=61000 time=2.2859455818991320e-01 dt=3.7161743803310119e-06
+cycle=62000 time=2.3231073257001536e-01 dt=3.7161743799732620e-06
+cycle=63000 time=2.3602690694998127e-01 dt=3.7161743799993756e-06
+converged
+ncycle  = 6.4000000000000000e+04
+rho_new = 4.5202882779356390e+11 g/cm^3
+active  = 3.4156741184802814e+11 g/cm^3
+tau     = 6.7731342167851372e-01
+time    = 2.3974308133006159e-01 s
+cycle=64000 time=2.3974308133006159e-01 dt=3.7161743801659243e-06
+cycle=65000 time=2.4345925571029414e-01 dt=3.7161743802846758e-06
+cycle=66000 time=2.4717543009060411e-01 dt=3.7161743803227195e-06
+
+Terminating on time limit
+time=2.5000000000000000e-01 cycle=66761
+tlim=2.5000000000000000e-01 nlim=-1
+
+zone-cycles = 17090816
+cpu time used  = 2.5440000000000001e+01
+zone-cycles/cpu_second = 6.7180880503144651e+05
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356
+Using USER inner BC 0.
+Using Matts's HelmEOS 
+Using Ye passive scalars in HEOS 
+Using Temp passive scalars in HELMEOS
+In HEOS Eta   -0.00192356

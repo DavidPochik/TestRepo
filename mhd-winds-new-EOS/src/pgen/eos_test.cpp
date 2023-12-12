@@ -40,7 +40,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   bool print_table = pin->GetOrAddBoolean("problem","print_table",false);
   bool exp_table = pin->GetOrAddBoolean("problem","exponentiate_table",false);
   bool eos_loop = pin->GetOrAddBoolean("problem","eos_loop",false);
-  bool eos_loop_prim = pin->GetOrAddBoolean("problem","eos_loop_prim",false);
 
   // Print EOS info
   std::cout << "Equation of state (EOS) diagnostics:" << '\n';
@@ -119,55 +118,29 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
               << "Non-positive inputs will exit loop." << '\n';
     std::cout << "Input density (mass/volume): ";
     std::cin >> rho;
-    if (eos_loop_prim) {
-      std::cout << "Input pressure (energy/volume): ";
-    } else {
-      std::cout << "Input internal energy (energy/volume): ";
-    }
+    std::cout << "Input internal energy (energy/volume): ";
     std::cin >> egas;
     while (rho > 0 && std::isfinite(rho) && egas >0 && std::isfinite(egas)) {
-      Real p, h, asq, perr, e;
+      Real p, h, asq, perr;
       FaceField f;
-      if (eos_loop_prim) {
-        std::cout << "Density, pressure: " << rho << ", " << egas << '\n';
-      } else {
-        std::cout << "Density, internal energy: " << rho << ", " << egas << '\n';
-      }
-      if (eos_loop_prim) {
-        w(IDN,0,0,0) = rho;
-        w(IPR,0,0,0) = egas;
-        peos->PrimitiveToConserved(w, zeros, u, pcoord, 0, 0, 0, 0, 0, 0);
-        peos->ConservedToPrimitive(u, zeros, f, w, zeros, pcoord, 0, 0, 0, 0, 0, 0);
-        e = u(IEN,0,0,0);
-        w2[IPR]=egas;
-        w2[IDN]=rho;
-        asq = SQR(peos->SoundSpeed(w2));
-        h = e + egas;
-        perr = 1.0 - w(IPR)/egas;
-        std::cout << "e(d, P)    , ASq(d, P)  , eErr\n";
-        std::cout << e << ", " << asq  << ", " << perr << '\n' << std::endl;
-        std::cout << "Input density (mass/volume): ";
-        std::cin >> rho;
-        std::cout << "Input pressure (energy/volume): ";
-        std::cin >> egas;
-      } else {
-        u(IDN,0,0,0) = rho;
-        u(IEN,0,0,0) = egas;
-        peos->ConservedToPrimitive(u, zeros, f, w, zeros, pcoord, 0, 0, 0, 0, 0, 0);
-        peos->PrimitiveToConserved(w, zeros, u, pcoord, 0, 0, 0, 0, 0, 0);
-        p = w(IPR,0,0,0);
-        w2[IPR]=p;
-        w2[IDN]=rho;
-        asq = SQR(peos->SoundSpeed(w2));
-        h = p + egas;
-        perr = 1.0 - u(IEN)/egas;
-        std::cout << "P(d, e)    , ASq(d, P)  , PErr\n";
-        std::cout << p << ", " << asq  << ", " << perr << '\n' << std::endl;
-        std::cout << "Input density (mass/volume): ";
-        std::cin >> rho;
-        std::cout << "Input internal energy (energy/volume): ";
-        std::cin >> egas;
-      }
+      std::cout << "Density, internal energy: " << rho << ", " << egas << '\n';
+      u(IDN,0,0,0) = rho;
+      u(IEN,0,0,0) = egas;
+      peos->ConservedToPrimitive(u, zeros, f, w, zeros, zeros, zeros, zeros, pcoord,
+                                 0, 0, 0, 0, 0, 0);
+      peos->PrimitiveToConserved(w, zeros, u, zeros, zeros, pcoord, 0, 0, 0, 0, 0, 0);
+      p = w(IPR,0,0,0);
+      w2[IPR]=p;
+      w2[IDN]=rho;
+      asq = SQR(peos->SoundSpeed(w2));
+      h = p + egas;
+      perr = 1.0 - u(IEN)/egas;
+      std::cout << "P(d, e)    , ASq(d, P)  , PErr\n";
+      std::cout << p << ", " << asq  << ", " << perr << '\n' << std::endl;
+      std::cout << "Input density (mass/volume): ";
+      std::cin >> rho;
+      std::cout << "Input internal energy (energy/volume): ";
+      std::cin >> egas;
     }
     std::cout << std::endl;
   }

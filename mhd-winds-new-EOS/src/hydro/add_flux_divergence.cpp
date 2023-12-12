@@ -107,7 +107,7 @@ void Hydro::AddFluxDivergence_STS(const Real wght, int stage,
                                   AthenaArray<Real> &fl_div_out,
                                   std::vector<int> idx_subset) {
   MeshBlock *pmb = pmy_block;
-  AthenaArray<Real> &x1flux = flux[X1DIR];   
+  AthenaArray<Real> &x1flux = flux[X1DIR];
   AthenaArray<Real> &x2flux = flux[X2DIR];
   AthenaArray<Real> &x3flux = flux[X3DIR];
   int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
@@ -117,7 +117,6 @@ void Hydro::AddFluxDivergence_STS(const Real wght, int stage,
                  &x3area_p1 = x3face_area_p1_, &vol = cell_volume_, &dflx = dflx_;
 
   for (int k=ks; k<=ke; ++k) {
-  std::cout<<"ENTER flux\n";
     for (int j=js; j<=je; ++j) {
       // calculate x1-flux divergence
       pmb->pcoord->Face1Area(k, j, is, ie+1, x1area);
@@ -125,15 +124,7 @@ void Hydro::AddFluxDivergence_STS(const Real wght, int stage,
         if (std::binary_search(idx_subset.begin(), idx_subset.end(), n)) {
 #pragma omp simd
           for (int i=is; i<=ie; ++i) {
-            std::cout<<"Nhydro , IM2  "<<NHYDRO<<"  "<<IM2<<"\n";
             dflx(n,i) = (x1area(i+1) *x1flux(n,k,j,i+1) - x1area(i)*x1flux(n,k,j,i));
-            if(n==IM2){
-             std::cout<<"ENTER dflx\n";
-             if (dflx(IM2,i)!=0.0){
-               std::cout<<"i , x1flux(n,k,j,i+1), x1flux(n,k,j,i)  "<<i<<"  "<< x1flux(n,k,j,i+1)<<"  "<<x1flux(n,k,j,i)<<"\n";}}
-            if (n==1){
-            	pmb->user_out_var(3,k,j,i) = x1flux(1,k,j,i+1); 
-	    }
           }
         }
       }
@@ -147,7 +138,6 @@ void Hydro::AddFluxDivergence_STS(const Real wght, int stage,
 #pragma omp simd
             for (int i=is; i<=ie; ++i) {
               dflx(n,i) += (x2area_p1(i)*x2flux(n,k,j+1,i) - x2area(i)*x2flux(n,k,j,i));
-              
             }
           }
         }
@@ -174,12 +164,8 @@ void Hydro::AddFluxDivergence_STS(const Real wght, int stage,
 #pragma omp simd
           for (int i=is; i<=ie; ++i) {
             u_out(n,k,j,i) -= wght*dflx(n,i)/vol(i);
-            if (n==1){
-            	pmb->user_out_var(4,k,j,i) = dflx(1,i)/vol(i); 
-	    }
             if (stage == 1 && pmb->pmy_mesh->sts_integrator == "rkl2") {
               fl_div_out(n,k,j,i) = -0.5*pmb->pmy_mesh->dt*dflx(n,i)/vol(i);
-
             }
           }
         }

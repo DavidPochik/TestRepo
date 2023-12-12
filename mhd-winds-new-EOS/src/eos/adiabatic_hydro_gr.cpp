@@ -68,14 +68,18 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(
 //!   AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &bb,
-//!   AthenaArray<Real> &prim, AthenaArray<Real> &bb_cc, Coordinates *pco, int il, int iu,
-//!   int jl, int ju, int kl, int ku)
+//!   AthenaArray<Real> &prim, AthenaArray<Real> &bb_cc, AthenaArray<Real> &s,
+//!   const AthenaArray<Real> &r_old, AthenaArray<Real> &r, Coordinates *pco,
+//!   int il, int iu, int jl, int ju, int kl, int ku)
 //! \brief Variable inverter
 //!
 //! Inputs:
 //!  - cons: conserved quantities
 //!  - prim_old: primitive quantities from previous half timestep
 //!  - bb: face-centered magnetic field (not used)
+//!  - s: conserved scalars
+//!  - r_old: old primitive scalars
+//!  - r: primitive scalars
 //!  - pco: pointer to Coordinates
 //!  - il, iu, jl, ju, kl, ku: index bounds of region to be updated
 //! Outputs:
@@ -87,8 +91,9 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
 
 void EquationOfState::ConservedToPrimitive(
     AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &bb,
-    AthenaArray<Real> &prim, AthenaArray<Real> &bb_cc, Coordinates *pco, int il, int iu,
-    int jl, int ju, int kl, int ku) {
+    AthenaArray<Real> &prim, AthenaArray<Real> &bb_cc, AthenaArray<Real> &s,
+    const AthenaArray<Real> &r_old, AthenaArray<Real> &r, Coordinates *pco,
+    int il, int iu, int jl, int ju, int kl, int ku) {
   // Parameters
   const Real mm_sq_ee_sq_max = 1.0 - 1.0e-12;  // max. of squared momentum over energy
 
@@ -242,31 +247,35 @@ void EquationOfState::ConservedToPrimitive(
       }
     }
   }
+  if (NSCALARS > 0)
+    PassiveScalarConservedToPrimitive(s, cons, r_old, r, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::PrimitiveToConserved(
-//!    const AthenaArray<Real> &prim,
-//!    const AthenaArray<Real> &bb_cc, AthenaArray<Real> &cons, Coordinates *pco,
-//!    int il, int iu, int jl, int ju, int kl, int ku)
+//!    const AthenaArray<Real> &prim, const AthenaArray<Real> &bb_cc,
+//!    AthenaArray<Real> &cons, const AthenaArray<Real> &r, AthenaArray<Real> &s,
+//!    Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku)
 //! \brief Function for converting all primitives to conserved variables
 //!
 //! Inputs:
 //!  - prim: primitives
 //!  - bb_cc: cell-centered magnetic field (unused)
+//!  - r: primitive scalars
 //!  - pco: pointer to Coordinates
 //!  - il,iu,jl,ju,kl,ku: index bounds of region to be updated
 //! Outputs:
 //!  - cons: conserved variables
+//!  - s: conserved scalars (unused)
 //! Notes:
 //!  - Single-cell function exists for other purposes; call made to that function rather
 //!       than having duplicate code.
 
 void EquationOfState::PrimitiveToConserved(
-    const AthenaArray<Real> &prim,
-    const AthenaArray<Real> &bb_cc, AthenaArray<Real> &cons, Coordinates *pco,
-    int il, int iu, int jl, int ju, int kl, int ku) {
+    const AthenaArray<Real> &prim, const AthenaArray<Real> &bb_cc,
+    AthenaArray<Real> &cons, const AthenaArray<Real> &r, AthenaArray<Real> &s,
+    Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku) {
   for (int k=kl; k<=ku; ++k) {
     for (int j=jl; j<=ju; ++j) {
       pco->CellMetric(k, j, il, iu, g_, g_inv_);
@@ -276,6 +285,8 @@ void EquationOfState::PrimitiveToConserved(
       }
     }
   }
+  if (NSCALARS > 0)
+    PassiveScalarPrimitiveToConserved(r, cons, s, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
@@ -625,7 +636,8 @@ void PrimitiveToConservedSingle(
 //!                                                 int i)
 //! \brief Apply density and pressure floors to reconstructed L/R cell interface states
 
-void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j, int i) {
+void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, AthenaArray<Real> &r,
+                                           int k, int j, int i) {
   Real& w_d  = prim(IDN,i);
   Real& w_p  = prim(IPR,i);
   // Not applying position-dependent floors here in GR, nor using rho_min
@@ -633,6 +645,7 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
   // apply pressure floor
   w_p = (w_p > pressure_floor_) ?  w_p : pressure_floor_;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarFloors(r, k, j, i);
   return;
 }

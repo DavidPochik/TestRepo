@@ -1,0 +1,145 @@
+#!/bin/bash
+#SBATCH --account=PAS2229
+#SBATCH --time=2:00:00
+#SBATCH --job-name=athena
+#SBATCH --nodes=7
+#SBATCH --ntasks=256
+#SBATCH --mail-type=ALL
+#SBATCH --export=ALL
+#SBATCH --open-mode=append
+
+module load intel/18.0.3
+module load intelmpi/2019.7
+module load hdf5
+module load miniconda3
+unset I_MPI_PMI_LIBRARY
+set -x
+cd $SLURM_SUBMIT_DIR
+
+conda create -n hdf5 python=3.9.7 hdf5=1.10.6 h5py=3.6.0
+conda create -n conda_env
+source activate conda_env
+conda activate hdf5
+conda install mpi4py
+conda install numpy
+conda install hdf5
+conda install matplotlib
+conda install scipy
+conda install -c conda-forge moviepy
+
+Lnu=(36 37)
+firstfile=00100
+physicaltime=3.0
+outputfreq=3.0e-2
+outputnumber=00100
+date=11_16_2023
+athinputfile=athinput.accretion_MACH_9_25_2023
+Mdot=0.7
+rMin=3.0e6
+rMax=1.0e8
+nR=256
+nRcell=2
+nCores=128
+MachNumber=2.0
+pgen=accretion_Mach_FullDefinition
+compile=true
+pythondir=/users/PAS2055/dpochik/test/athena_CURRENT_WORKING_DIRECTORY_DIR/athena_WORKING_DIR/athena_RUN_1D_ChangeLnu_DIR/vis/python
+eosdir=/users/PAS2055/dpochik/test/athena_CURRENT_WORKING_DIRECTORY_DIR/athena_WORKING_DIR/athena_RUN_2D_DIR/helm_table.dat
+
+if ${compile}; then
+	echo 'Compiling new executable...'
+	python configure.py --prob ${pgen} --eos general/helmholtz_gamma_etot --coord spherical_polar --nscalars 2 -h5double -mpi -hdf5 --hdf5_path=${HDF5_HOME}
+	make clean
+	make
+else
+	echo 'Using existing executable in bin/'
+fi
+
+echo "rm -rf accretion.*"
+rm -rf accretion.*
+echo "rm -rf *.txt"
+rm -rf *.txt
+echo "rm -rf *.tar.gz"
+rm -rf *.tar.gz
+
+index=1
+while [ $index -le ${#Lnu[@]} ]
+do
+	if [ $index -eq 1 ]; then
+	        echo Lnu=${Lnu[index-1]}
+		DIR=/users/PAS2055/dpochik/test/athena_CURRENT_WORKING_DIRECTORY_DIR/athena_WORKING_DIR/athena_RUN_1D_ChangeLnu_DIR/Lnu_${Lnu[index-1]}e51_Mdot_${Mdot}_Mach_${Mach}_${date}_DIR
+		if [ -d "$DIR" ]; then
+    			echo "$DIR directory exists."
+		else
+			echo "$DIR directory does not exist. Making directory..."
+			mkdir ${DIR}
+		fi
+		# This makes the IC file that includes pressure (only want this to find initial values, not to start the code with it)
+		python athdf2txt_StartIC.py ${Mdot} ${firstfile} ${Lnu[index-1]} ${pythondir}
+		# This makes the IC for the code itself, which relies on data in a specific directory
+		python athdf2txt_firststep.py ${Mdot} ${firstfile} ${Lnu[index-1]} ${pythondir}
+		IC_trim_firstrow=$(sed '1!d' Lnu_${Lnu[index-1]}e51_Mdot_${Mdot}_RPNS_30km_StartIC.txt)
+		IC_trim_lastrow=$(sed '$!d' Lnu_${Lnu[index-1]}e51_Mdot_${Mdot}_RPNS_30km_StartIC.txt)
+		echo $IC_trim_firstrow > IC_trim_firstrow.txt
+		echo $IC_trim_lastrow > IC_trim_lastrow.txt
+		cat IC_trim_firstrow.txt
+		cat IC_trim_lastrow.txt
+		IC_RhoB=$(awk -F" " '{print $2}' IC_trim_firstrow.txt)
+		IC_TB=$(awk -F" " '{print $4}' IC_trim_firstrow.txt)
+		IC_YeB=$(awk -F" " '{print $5}' IC_trim_firstrow.txt)
+#		IC_RhoE=$(awk -F" " '{print $2}' IC_trim_lastrow.txt)
+		IC_vE=$(awk -F" " '{print $3}' IC_trim_lastrow.txt)
+		IC_pE=$(awk -F" " '{print $6}' IC_trim_lastrow.txt)
+		python Mdot_rhof_calculator_NEW.py ${Mdot} ${IC_vE} ${rMax} ${pythondir}
+		# Read values from files
+                IC_RhoE=$(awk -F" " '{print $1}' rho_f_${Mdot}.txt)
+		# Calculating logarithmic scale for radial coordinate
+		python r_logscale.py ${rMin} ${rMax} ${nR} ${pythondir}
+		rScale=$(awk -F" " '{print $1}' r_scale.txt)
+		echo rScale = ${rScale}
+		echo rho_i = ${IC_RhoB}
+		echo rho_f = ${IC_RhoE}
+		echo T_i   = ${IC_TB}
+		echo Ye_i  = ${IC_YeB}
+		echo v_f   = ${IC_vE}
+		echo p_f   = ${IC_pE}
+
+		mpiexec -n ${nCores} bin/athena -i ${athinputfile} Lnu_${Lnu[index-1]}e51_Mdot_${Mdot}_RPNS_30km_firststep.txt mesh/nx1=${nR} mesh/x1min=${rMin} mesh/x1max=${rMax} mesh/x1rat=${rScale} meshblock/nx1=${nRcell} problem/rho_f=${IC_RhoE} hydro/Ye_0=${IC_YeB} problem/rho_0=${IC_RhoB} problem/T_0=${IC_TB} problem/v_f=${IC_vE} problem/p_f=${IC_pE} problem/MachNumber=${MachNumber} problem/mdot=${Mdot} output1/dt=${outputfreq} output2/dt=${outputfreq} output4/dt=${outputfreq} hydro/eos_file_name=${eosdir} time/tlim=${physicaltime} problem/L_nubar=${Lnu[index-1]} problem/L_nu=${Lnu[index-1]} problem/file=Lnu_${Lnu[index-1]}e51_Mdot_${Mdot}_RPNS_30km_firststep.txt |tee Lnu_${Lnu[index-1]}e51.txt
+
+		python athdf2txt.py ${Lnu[index-1]} ${outputnumber} ${Mdot} ${pythondir}
+		tarfile=Lnu_${Lnu[index-1]}_Mdot_${Mdot}_Mach_${Mach}_RPNS_30km.tar.gz
+		tar -zcvf ${tarfile} accretion.*
+		mv IC_trim_firstrow.txt ${DIR}
+		mv IC_trim_lastrow.txt ${DIR}
+		mv rho_f_${Mdot}.txt ${DIR}
+		mv r_scale.txt ${DIR}
+		mv Lnu_${Lnu}e51_Mdot_${Mdot[index-1]}_RPNS_30km_StartIC.txt ${DIR}
+		rm -rf accretion.*
+		mv ${tarfile} ${DIR}
+		mv Lnu_${Lnu[index-1]}e51_Mdot_${Mdot}_RPNS_30km_firststep.txt ${DIR}
+		mv Lnu_${Lnu[index-1]}e51.txt ${DIR}
+#		cp scp2osc_script ${DIR}
+		((index++))
+	else
+	        echo Lnu=${Lnu[index-1]}
+		DIR=/users/PAS2055/dpochik/test/athena_CURRENT_WORKING_DIRECTORY_DIR/athena_WORKING_DIR/athena_RUN_1D_ChangeLnu_DIR/Lnu_${Lnu[index-1]}e51_Mdot_${Mdot}_Mach_${Mach}_${date}_DIR
+		if [ -d "$DIR" ]; then
+    			echo "$DIR directory exists."
+		else
+			echo "$DIR directory does not exist. Making directory..."
+			mkdir ${DIR}
+		fi
+
+
+		mpiexec -n ${nCores} bin/athena -i ${athinputfile} Lnu_${Lnu[index-2]}e51_Mdot_${Mdot}_RPNS_30km.txt mesh/nx1=${nR} mesh/x1min=${rMin} mesh/x1max=${rMax} mesh/x1rat=${rScale} meshblock/nx1=${nRcell} problem/rho_f=${IC_RhoE} hydro/Ye_0=${IC_YeB} problem/rho_0=${IC_RhoB} problem/T_0=${IC_TB} problem/v_f=${IC_vE} problem/p_f=${IC_pE} problem/MachNumber=${MachNumber} problem/mdot=${Mdot} output1/dt=${outputfreq} output2/dt=${outputfreq} output4/dt=${outputfreq} hydro/eos_file_name=${eosdir} time/tlim=${physicaltime} problem/L_nubar=${Lnu[index-1]} problem/L_nu=${Lnu[index-1]} problem/file=Lnu_${Lnu[index-2]}e51_Mdot_${Mdot}_RPNS_30km.txt |tee Lnu_${Lnu[index-1]}e51.txt	
+		python athdf2txt.py ${Lnu[index-1]} ${outputnumber} ${Mdot} ${pythondir}
+		tarfile=Lnu_${Lnu[index-1]}_Mdot_${Mdot}_Mach_${Mach}_RPNS_30km.tar.gz
+		tar -zcvf ${tarfile} accretion.*
+		rm -rf accretion.*
+		mv ${tarfile} ${DIR}
+		mv Lnu_${Lnu[index-2]}e51_Mdot_${Mdot}_RPNS_30km.txt ${DIR}
+		mv Lnu_${Lnu[index-1]}e51.txt ${DIR}
+#		cp scp2osc_script ${DIR}
+		((index++))
+	fi
+done

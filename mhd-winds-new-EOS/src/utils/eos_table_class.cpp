@@ -109,25 +109,6 @@ void ReadHDF5Table(std::string fn, EosTable *peos_table, ParameterInput *pin) {
   }
 }
 
-//----------------------------------------------------------------------------------------
-//! \fn void ReadAsciiTable(std::string fn, EosTable *peos_table, ParameterInput *pin)
-//! \brief Read data from HDF5 EOS table and initialize interpolated table.
-
-void ReadAsciiTable(std::string fn, EosTable *peos_table, ParameterInput *pin) {
-  bool read_ratios = pin->GetOrAddBoolean("hydro", "eos_read_ratios", true);
-  AthenaArray<Real> *pratios = nullptr;
-  if (read_ratios) pratios = &peos_table->EosRatios;
-  // If read_ratios then EosRatios.NewAthenaArray is called in ASCIITableLoader
-  ASCIITableLoader(fn.c_str(), peos_table->table, pratios);
-  peos_table->table.GetSize(peos_table->nVar, peos_table->nEgas, peos_table->nRho);
-  peos_table->table.GetX2lim(peos_table->logEgasMin, peos_table->logEgasMax);
-  peos_table->table.GetX1lim(peos_table->logRhoMin, peos_table->logRhoMax);
-  if (!read_ratios) {
-    peos_table->EosRatios.NewAthenaArray(peos_table->nVar);
-    for (int i=0; i<peos_table->nVar; ++i) peos_table->EosRatios(i) = 1.0;
-  }
-}
-
 void ReadHelmTable(std::string fn, EosTable *peos_table, ParameterInput *pin) {
   int jmax, imax;
   Real tlo, thi; // log temperature limits
@@ -153,7 +134,7 @@ void ReadHelmTable(std::string fn, EosTable *peos_table, ParameterInput *pin) {
   //Real dstpi = 1.0/dstp;
 
   //init table
-  peos_table->table.SetSize(17, imax, jmax);
+  peos_table->table.SetSize(21, imax, jmax);
   peos_table->table.SetX1lim(dlo, dhi);
   peos_table->table.SetX2lim(tlo, thi);
   peos_table->table.GetSize(peos_table->nVar, peos_table->nRho, peos_table->nEgas);
@@ -217,14 +198,19 @@ void ReadHelmTable(std::string fn, EosTable *peos_table, ParameterInput *pin) {
   }
 
   // read the electron chemical potential table
+  AthenaArray<Real> ef, efd, eft, efdt;
+  ef.InitWithShallowSlice(peos_table->table.data, 3, 17, 1);
+  efd.InitWithShallowSlice(peos_table->table.data, 3, 18, 1);
+  eft.InitWithShallowSlice(peos_table->table.data, 3, 19, 1);
+  efdt.InitWithShallowSlice(peos_table->table.data, 3, 20, 1);
   for (int j=0; j<jmax; ++j) {
     for (int i=0; i<imax; ++i) {
       while (std::getline(file, line) && (line[0] == '#')) continue;
-      //std::stringstream lstream(line);
-      //lstream >> ef(i,j);
-      //lstream >> efd(i,j);
-      //lstream >> eft(i,j);
-      //lstream >> efdt(i,j);
+      std::stringstream lstream(line);
+      lstream >> ef(i,j);
+      lstream >> efd(i,j);
+      lstream >> eft(i,j);
+      lstream >> efdt(i,j);
     }
   }
 
@@ -247,6 +233,24 @@ void ReadHelmTable(std::string fn, EosTable *peos_table, ParameterInput *pin) {
 
   // close the file
   file.close();
+}
+//----------------------------------------------------------------------------------------
+//! \fn void ReadAsciiTable(std::string fn, EosTable *peos_table, ParameterInput *pin)
+//! \brief Read data from HDF5 EOS table and initialize interpolated table.
+
+void ReadAsciiTable(std::string fn, EosTable *peos_table, ParameterInput *pin) {
+  bool read_ratios = pin->GetOrAddBoolean("hydro", "eos_read_ratios", true);
+  AthenaArray<Real> *pratios = nullptr;
+  if (read_ratios) pratios = &peos_table->EosRatios;
+  // If read_ratios then EosRatios.NewAthenaArray is called in ASCIITableLoader
+  ASCIITableLoader(fn.c_str(), peos_table->table, pratios);
+  peos_table->table.GetSize(peos_table->nVar, peos_table->nEgas, peos_table->nRho);
+  peos_table->table.GetX2lim(peos_table->logEgasMin, peos_table->logEgasMax);
+  peos_table->table.GetX1lim(peos_table->logRhoMin, peos_table->logRhoMax);
+  if (!read_ratios) {
+    peos_table->EosRatios.NewAthenaArray(peos_table->nVar);
+    for (int i=0; i<peos_table->nVar; ++i) peos_table->EosRatios(i) = 1.0;
+  }
 }
 
 // ctor
@@ -276,12 +280,12 @@ EosTable::EosTable(ParameterInput *pin) :
   } else if (eos_file_type.compare("ascii") == 0) { // ASCII/text table
     ReadAsciiTable(eos_fn, this, pin);
   } else if (eos_file_type.compare("helm") == 0) { // helmholtz table
-    ReadHelmTable(eos_fn, this, pin);
+     ReadHelmTable(eos_fn, this, pin);
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in EosTable::EosTable" << std::endl
         << "EOS table of type '" << eos_file_type << "' not recognized."  << std::endl
-        << "Options are 'ascii', 'binary', 'hdf5', and 'helm'." << std::endl;
+        << "Options are 'ascii', 'binary', and 'hdf5'." << std::endl;
     ATHENA_ERROR(msg);
   }
 }

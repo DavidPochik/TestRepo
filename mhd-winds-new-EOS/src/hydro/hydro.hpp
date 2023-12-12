@@ -44,6 +44,8 @@ class Hydro {
   AthenaArray<Real> u1, w1;      // time-integrator memory register #2
   AthenaArray<Real> u2;          // time-integrator memory register #3
   AthenaArray<Real> u0, fl_div; // rkl2 STS memory registers;
+  // for the HL3D2 solver
+  AthenaArray<Real> dvn, dvt;
   // (no more than MAX_NREGISTER allowed)
 
   AthenaArray<Real> flux[3];  // face-averaged flux vector
@@ -67,23 +69,27 @@ class Hydro {
                              AthenaArray<Real> &u_out,
                              AthenaArray<Real> &fl_div_out,
                              std::vector<int> idx_subset);
-  void CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
-                       AthenaArray<Real> &bcc, const int order);
+  void CalculateFluxes(AthenaArray<Real> &w, FaceField &b, AthenaArray<Real> &bcc,
+                       AthenaArray<Real> &r, const int order);
   void CalculateFluxes_STS();
 #if !MAGNETIC_FIELDS_ENABLED  // Hydro:
   void RiemannSolver(
       const int k, const int j, const int il, const int iu,
       const int ivx,
       AthenaArray<Real> &wl, AthenaArray<Real> &wr, AthenaArray<Real> &flx,
-      const AthenaArray<Real> &dxw);
+      const AthenaArray<Real> &dxw, AthenaArray<Real> &rl, AthenaArray<Real> &rr,
+      AthenaArray<Real> &sflx);
 #else  // MHD:
   void RiemannSolver(
       const int k, const int j, const int il, const int iu,
       const int ivx, const AthenaArray<Real> &bx,
       AthenaArray<Real> &wl, AthenaArray<Real> &wr, AthenaArray<Real> &flx,
       AthenaArray<Real> &ey, AthenaArray<Real> &ez,
-      AthenaArray<Real> &wct, const AthenaArray<Real> &dxw);
+      AthenaArray<Real> &wct, const AthenaArray<Real> &dxw,
+      AthenaArray<Real> &rl, AthenaArray<Real> &rr, AthenaArray<Real> &sflx);
 #endif
+  void CalculateVelocityDifferences(const int k, const int j, const int il, const int iu,
+    const int ivx, AthenaArray<Real> &dvn, AthenaArray<Real> &dvt);
 
  private:
   AthenaArray<Real> dt1_, dt2_, dt3_;  // scratch arrays used in NewTimeStep

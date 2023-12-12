@@ -19,21 +19,21 @@
 // Athena++ headers
 #include "../eos.hpp"
 
-Real EquationOfState::PresFromRhoEg(Real rho, Real egas) {
+Real EquationOfState::PresFromRhoEg(Real rho, Real egas, Real* s) {
   std::stringstream msg;
   msg << "### FATAL ERROR in EquationOfState::PresFromRhoEg" << std::endl
       << "Function should not be called with current configuration." << std::endl;
   ATHENA_ERROR(msg);
   return -1.0;
 }
-Real EquationOfState::EgasFromRhoP(Real rho, Real pres) {
+Real EquationOfState::EgasFromRhoP(Real rho, Real pres, Real* r) {
   std::stringstream msg;
   msg << "### FATAL ERROR in EquationOfState::EgasFromRhoP" << std::endl
       << "Function should not be called with current configuration." << std::endl;
   ATHENA_ERROR(msg);
   return -1.0;
 }
-Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
+Real EquationOfState::AsqFromRhoP(Real rho, Real pres, const Real* r) {
   std::stringstream msg;
   msg << "### FATAL ERROR in EquationOfState::AsqFromRhoP" << std::endl
       << "Function should not be called with current configuration." << std::endl;
@@ -41,33 +41,26 @@ Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
   return -1.0;
 }
 
+// overload eos calls without tracers for backward compatibility
+Real EquationOfState::PresFromRhoEg(Real rho, Real egas) {
+  return PresFromRhoEg(rho, egas, nullptr);
+}
+Real EquationOfState::EgasFromRhoP(Real rho, Real pres) {
+  return EgasFromRhoP(rho, pres, nullptr);
+}
+Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
+  return AsqFromRhoP(rho, pres, nullptr);
+}
+void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
+    const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
+    int il, int iu, int jl, int ju, int kl, int ku) {
+  AthenaArray<Real> empty;
+  PrimitiveToConserved(prim, bc, cons, empty, empty, pco, il, iu, jl, ju, kl, ku);
+}
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::InitEosConstants(ParameterInput* pin)
 //! \brief Initialize constants for EOS
 void EquationOfState::InitEosConstants(ParameterInput *pin) {
   return;
-}
-
-void EquationOfState::SevenFromRhoT(Real rho, Real T, AthenaArray<Real> &out) {
-  std::stringstream msg;
-  msg << "### FATAL ERROR in EquationOfState::SevenFromRhoT" << std::endl
-      << "Function should not be called with current configuration." << std::endl;
-  ATHENA_ERROR(msg);
-}
-
-Real EquationOfState::TFromRhoP(Real rho, Real pres) {
-  std::stringstream msg;
-  msg << "### FATAL ERROR in EquationOfState::TFromRhoP" << std::endl
-      << "Function should not be called with current configuration." << std::endl;
-  ATHENA_ERROR(msg);
-  return -1.0;
-}
-
-Real EquationOfState::TFromRhoEgas(Real rho, Real egas) {
-  std::stringstream msg;
-  msg << "### FATAL ERROR in EquationOfState::TFromRhoEgas" << std::endl
-      << "Function should not be called with current configuration." << std::endl;
-  ATHENA_ERROR(msg);
-  return -1.0;
 }

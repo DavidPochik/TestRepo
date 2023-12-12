@@ -31,18 +31,23 @@ struct Cons1D {
 #define SMALL_NUMBER 1.0e-8
 
 //----------------------------------------------------------------------------------------
+//! \fn void Hydro::RiemannSolver
+//! \brief The HLLD Riemann solver for isothermal MHD
 
 void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
                           const int ivx, const AthenaArray<Real> &bx,
                           AthenaArray<Real> &wl, AthenaArray<Real> &wr,
                           AthenaArray<Real> &flx,
                           AthenaArray<Real> &ey, AthenaArray<Real> &ez,
-                          AthenaArray<Real> &wct, const AthenaArray<Real> &dxw) {
+                          AthenaArray<Real> &wct, const AthenaArray<Real> &dxw,
+                          AthenaArray<Real> &rl, AthenaArray<Real> &rr,
+                          AthenaArray<Real> &sflx) {
   int ivy = IVX + ((ivx-IVX)+1)%3;
   int ivz = IVX + ((ivx-IVX)+2)%3;
-  Real flxi[(NWAVE)];             // temporary variable to store flux
-  Real wli[(NWAVE)],wri[(NWAVE)]; // L/R states, primitive variables (input)
-  Real spd[5];                    // signal speeds, left to right
+  Real flxi[(NWAVE)];  // temporary variable to store flux
+  // L/R states, primitive variables (input)
+  Real wli[(NWAVE+NSCALARS*GENERAL_EOS)],wri[(NWAVE+NSCALARS*GENERAL_EOS)];
+  Real spd[5];         // signal speeds, left to right
 
   Real dfloor = pmy_block->peos->GetDensityFloor();
   Real cs = (pmy_block->peos->GetIsoSoundSpeed());
@@ -69,6 +74,13 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     wri[IVZ]=wr(ivz,i);
     wri[IBY]=wr(IBY,i);
     wri[IBZ]=wr(IBZ,i);
+
+    if (GENERAL_EOS) {
+      for (int n=0; n<NSCALARS; ++n) {
+        wli[NWAVE+n]=rl(n,i);
+        wri[NWAVE+n]=rr(n,i);
+      }
+    }
 
     Real bxi = bx(k,j,i);
 
@@ -246,6 +258,13 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     ez(k,j,i) =  flxi[IBZ];
 
     wct(k,j,i)=GetWeightForCT(flxi[IDN], wli[IDN], wri[IDN], dxw(i), dt);
+
+    for (int n=0; n<NSCALARS; n++) {
+      if (flx(IDN,k,j,i) >= 0.0)
+        sflx(n,k,j,i) = flx(IDN,k,j,i) * rl(n,i);
+      else
+        sflx(n,k,j,i) = flx(IDN,k,j,i) * rr(n,i);
+    }
   }
 
   return;

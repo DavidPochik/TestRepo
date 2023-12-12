@@ -14,6 +14,7 @@
 #   --flux=xxx        use xxx as the Riemann solver
 #   --nghost=xxx      set NGHOST=xxx
 #   --nscalars=xxx    set NSCALARS=xxx
+#   -eos_table        enable EOS table
 #   -b                enable magnetic fields
 #   -s                enable special relativity
 #   -g                enable general relativity
@@ -88,16 +89,22 @@ parser.add_argument(
     help='select coordinate system')
 
 # --eos=[name] argument
+gen_eos_directory = 'src/eos/general/'
+# set gen_eos_choices to list of .cpp files in src/eos/general
+gen_eos_choices = glob.glob(gen_eos_directory + '*.cpp')
+# remove 'src/eos/' prefix and '.cpp' extension from each filename, remove "general" files
+gen_eos_choices = [choice[len('src/eos/'):-4] for choice in gen_eos_choices
+                   if 'src/eos/general/general' not in choice]
+gen_eos_choices.remove('general/noop')
 parser.add_argument('--eos',
                     default='adiabatic',
-                    choices=['adiabatic', 'isothermal', 'general/eos_table',
-                             'general/helmholtz', 'general/hydrogen', 'general/ideal','general/eos_qw','general/eos_qw_matt'],
+                    choices=['adiabatic', 'isothermal'] + gen_eos_choices,
                     help='select equation of state')
 
 # --flux=[name] argument
 parser.add_argument('--flux',
                     default='default',
-                    choices=['default', 'hlle', 'hllc', 'hlld', 'roe', 'llf'],
+                    choices=['default', 'hlle', 'hllc', 'lhllc', 'hlld', 'lhlld', 'roe', 'llf'], # noqa
                     help='select Riemann solver')
 
 # --nghost=[value] argument
@@ -173,7 +180,7 @@ parser.add_argument('-omp',
 # --grav=[name] argument
 parser.add_argument('--grav',
                     default='none',
-                    choices=['none', 'fft', 'mg'],
+                    choices=['none', 'fft'],
                     help='select self-gravity solver')
 
 # -fft argument
@@ -213,6 +220,7 @@ parser.add_argument('--hdf5_path',
 cxx_choices = [
     'g++',
     'g++-simd',
+    'icpx',
     'icpc',
     'icpc-debug',
     'icpc-phi',
@@ -227,6 +235,7 @@ cxx_choices = [
 def c_to_cpp(arg):
     arg = arg.replace('gcc', 'g++', 1)
     arg = arg.replace('icc', 'icpc', 1)
+    arg = arg.replace('icx', 'icpx', 1)
     if arg == 'bgxl' or arg == 'bgxlc':
         arg = 'bgxlc++'
 
@@ -309,8 +318,16 @@ if args['flux'] == 'hllc' and args['eos'] == 'isothermal':
     raise SystemExit('### CONFIGURE ERROR: HLLC flux cannot be used with isothermal EOS')
 if args['flux'] == 'hllc' and args['b']:
     raise SystemExit('### CONFIGURE ERROR: HLLC flux cannot be used with MHD')
+if args['flux'] == 'lhllc' and args['eos'] == 'isothermal':
+    raise SystemExit('### CONFIGURE ERROR: LHLLC flux cannot be used with isothermal EOS') # noqa
+if args['flux'] == 'lhllc' and args['b']:
+    raise SystemExit('### CONFIGURE ERROR: LHLLC flux cannot be used with MHD')
 if args['flux'] == 'hlld' and not args['b']:
     raise SystemExit('### CONFIGURE ERROR: HLLD flux can only be used with MHD')
+if args['flux'] == 'lhlld' and args['eos'] == 'isothermal':
+    raise SystemExit('### CONFIGURE ERROR: LHLLD flux cannot be used with isothermal EOS') # noqa
+if args['flux'] == 'lhlld' and not args['b']:
+    raise SystemExit('### CONFIGURE ERROR: LHLLD flux can only be used with MHD')
 
 # Check relativity
 if args['s'] and args['g']:
@@ -370,6 +387,12 @@ else:
     definitions['NHYDRO_VARIABLES'] = '5'
     if args['eos'] in ['general/eos_table', 'general/helmholtz']:
         definitions['EOS_TABLE_ENABLED'] = '1'
+    if args['eos'] in ['general/eos_table', 'general/helmholtz_gamma']:
+        definitions['EOS_TABLE_ENABLED'] = '1'
+    if args['eos'] in ['general/eos_table', 'general/helmholtz_gamma_etot']:
+        definitions['EOS_TABLE_ENABLED'] = '1'
+
+
 
 # --flux=[name] argument
 definitions['RSOLVER'] = makefile_options['RSOLVER_FILE'] = args['flux']
@@ -457,6 +480,20 @@ if args['cxx'] == 'g++-simd':
         # -mprefer-avx128
         # -m64 (default)
     )
+    makefile_options['LINKER_FLAGS'] = ''
+    makefile_options['LIBRARY_FLAGS'] = ''
+if args['cxx'] == 'icpx':
+    # Next-gen LLVM-based Intel oneAPI DPC++/C++ Compiler
+    definitions['COMPILER_CHOICE'] = 'icpx'
+    definitions['COMPILER_COMMAND'] = makefile_options['COMPILER_COMMAND'] = 'icpx'
+    makefile_options['PREPROCESSOR_FLAGS'] = ''
+    # ICX drivers icx and icpx will accept ICC Classic Compiler options or Clang*/LLVM
+    # Compiler options
+    makefile_options['COMPILER_FLAGS'] = (
+      '-O3 -std=c++11 -ipo -xhost -qopenmp-simd '
+    )
+    # Currently unsupported, but "options to be supported" according to icpx
+    # -qnextgen-diag: '-inline-forceinline -qopt-prefetch=4 '
     makefile_options['LINKER_FLAGS'] = ''
     makefile_options['LIBRARY_FLAGS'] = ''
 if args['cxx'] == 'icpc':
@@ -562,6 +599,7 @@ if args['debug']:
     # Completely replace the --cxx= sets of default compiler flags, disable optimization,
     # and emit debug symbols in the compiled binaries
     if (args['cxx'] == 'g++' or args['cxx'] == 'g++-simd'
+            or args['cxx'] == 'icpx'
             or args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug'
             or args['cxx'] == 'clang++' or args['cxx'] == 'clang++-simd'
             or args['cxx'] == 'clang++-apple'):
@@ -587,6 +625,7 @@ if args['coverage']:
             ' -fno-inline -fno-exceptions -fno-elide-constructors'
             )
     if (args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug'
+            or args['cxx'] == 'icpx'
             or args['cxx'] == 'icpc-phi'):
         makefile_options['COMPILER_FLAGS'] += ' -O0 -prof-gen=srcpos'
     if (args['cxx'] == 'clang++' or args['cxx'] == 'clang++-simd'
@@ -618,6 +657,7 @@ else:
 if args['mpi']:
     definitions['MPI_OPTION'] = 'MPI_PARALLEL'
     if (args['cxx'] == 'g++' or args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug'
+            or args['cxx'] == 'icpx'
             or args['cxx'] == 'icpc-phi' or args['cxx'] == 'g++-simd'
             or args['cxx'] == 'clang++' or args['cxx'] == 'clang++-simd'
             or args['cxx'] == 'clang++-apple'):
@@ -643,7 +683,8 @@ if args['omp']:
         # preprocessor. Must install LLVM's OpenMP runtime library libomp beforehand
         makefile_options['COMPILER_FLAGS'] += ' -Xpreprocessor -fopenmp'
         makefile_options['LIBRARY_FLAGS'] += ' -lomp'
-    if args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi':
+    if (args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi'
+            or args['cxx'] == 'icpx'):
         makefile_options['COMPILER_FLAGS'] += ' -qopenmp'
     if args['cxx'] == 'cray':
         makefile_options['COMPILER_FLAGS'] += ' -homp'
@@ -656,7 +697,8 @@ else:
     definitions['OPENMP_OPTION'] = 'NOT_OPENMP_PARALLEL'
     if args['cxx'] == 'cray':
         makefile_options['COMPILER_FLAGS'] += ' -hnoomp'
-    if args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi':
+    if (args['cxx'] == 'icpc' or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi'
+            or args['cxx'] == 'icpx'):
         # suppressed messages:
         #   3180: pragma omp not recognized
         makefile_options['COMPILER_FLAGS'] += ' -diag-disable 3180'
@@ -670,9 +712,6 @@ else:
         if not args['fft']:
             raise SystemExit(
                 '### CONFIGURE ERROR: FFT Poisson solver only be used with FFT')
-
-    if args['grav'] == "mg":
-        definitions['SELF_GRAVITY_ENABLED'] = '2'
 
 # -fft argument
 makefile_options['MPIFFT_FILE'] = ' '
@@ -699,6 +738,7 @@ if args['hdf5']:
         makefile_options['LINKER_FLAGS'] += ' -L{0}/lib'.format(args['hdf5_path'])
     if (args['cxx'] == 'g++' or args['cxx'] == 'g++-simd'
             or args['cxx'] == 'cray' or args['cxx'] == 'icpc'
+            or args['cxx'] == 'icpx'
             or args['cxx'] == 'icpc-debug' or args['cxx'] == 'icpc-phi'
             or args['cxx'] == 'clang++' or args['cxx'] == 'clang++-simd'
             or args['cxx'] == 'clang++-apple'):
@@ -775,8 +815,6 @@ with open(makefile_output, 'w') as current_file:
 self_grav_string = 'OFF'
 if args['grav'] == 'fft':
     self_grav_string = 'FFT'
-elif args['grav'] == 'mg':
-    self_grav_string = 'Multigrid'
 
 print('Your Athena++ distribution has now been configured with the following options:')
 print('  Problem generator:          ' + args['prob'])

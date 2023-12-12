@@ -10,30 +10,28 @@
 // C headers
 
 // C++ headers
-#include <sstream>
-#include <string>
 
 // Athena++ headers
 #include "../eos.hpp"
 
 //----------------------------------------------------------------------------------------
-//! \fn Real EquationOfState::PresFromRhoEg(Real rho, Real egas)
+//! \fn Real EquationOfState::PresFromRhoEg(Real rho, Real egas, Real* s)
 //! \brief Return gas pressure
-Real EquationOfState::PresFromRhoEg(Real rho, Real egas) {
+Real EquationOfState::PresFromRhoEg(Real rho, Real egas, Real* s) {
   return (gamma_ - 1.) * egas;
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn Real EquationOfState::EgasFromRhoP(Real rho, Real pres)
+//! \fn Real EquationOfState::EgasFromRhoP(Real rho, Real pres, Real* r)
 //! \brief Return internal energy density
-Real EquationOfState::EgasFromRhoP(Real rho, Real pres) {
+Real EquationOfState::EgasFromRhoP(Real rho, Real pres, Real* r) {
   return pres / (gamma_ - 1.);
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn Real EquationOfState::AsqFromRhoP(Real rho, Real pres)
+//! \fn Real EquationOfState::AsqFromRhoP(Real rho, Real pres, const Real* r)
 //! \brief Return adiabatic sound speed squared
-Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
+Real EquationOfState::AsqFromRhoP(Real rho, Real pres, const Real* r) {
   return gamma_ * pres / rho;
 }
 
@@ -42,26 +40,4 @@ Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
 //! \brief Initialize constants for EOS
 void EquationOfState::InitEosConstants(ParameterInput *pin) {
   return;
-}
-
-void EquationOfState::SevenFromRhoT(Real rho, Real T, AthenaArray<Real> &out) {
-  std::stringstream msg;
-  msg << "### FATAL ERROR in EquationOfState::SevenFromRhoT" << std::endl
-      << "Function should not be called with current configuration." << std::endl;
-  ATHENA_ERROR(msg);
-}
-Real EquationOfState::TFromRhoP(Real rho, Real pres) {
-  std::stringstream msg;
-  msg << "### FATAL ERROR in EquationOfState::TFromRhoP" << std::endl
-      << "Function should not be called with current configuration." << std::endl;
-  ATHENA_ERROR(msg);
-  return -1.0;
-}
-
-Real EquationOfState::TFromRhoEgas(Real rho, Real egas) {
-  std::stringstream msg;
-  msg << "### FATAL ERROR in EquationOfState::TFromRhoEgas" << std::endl
-      << "Function should not be called with current configuration." << std::endl;
-  ATHENA_ERROR(msg);
-  return -1.0;
 }

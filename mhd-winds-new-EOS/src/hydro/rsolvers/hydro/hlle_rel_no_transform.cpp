@@ -18,13 +18,16 @@
 #include "../../../coordinates/coordinates.hpp"  // Coordinates
 #include "../../../eos/eos.hpp"                  // EquationOfState
 #include "../../../mesh/mesh.hpp"                // MeshBlock
+#include "../../../scalars/scalars.hpp"          // PassiveScalars
 #include "../../hydro.hpp"
 
 //----------------------------------------------------------------------------------------
 //! \fn void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
 //!                           const int ivx,
 //!                           AthenaArray<Real> &prim_l, AthenaArray<Real> &prim_r,
-//!                           AthenaArray<Real> &flux, const AthenaArray<Real> &dxw)
+//!                           AthenaArray<Real> &flux, const AthenaArray<Real> &dxw,
+//!                           const AthenaArray<Real> &rl, const AthenaArray<Real> &rl,
+//!                           const AthenaArray<Real> &sflx)
 //! \brief Riemann solver
 //!
 //! Inputs:
@@ -42,7 +45,9 @@
 void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
                           const int ivx,
                           AthenaArray<Real> &prim_l, AthenaArray<Real> &prim_r,
-                          AthenaArray<Real> &flux, const AthenaArray<Real> &dxw) {
+                          AthenaArray<Real> &flux, const AthenaArray<Real> &dxw,
+                          AthenaArray<Real> &rl, AthenaArray<Real> &rr,
+                          AthenaArray<Real> &sflx) {
   // Calculate cyclic permutations of indices
   int ivy = IVX + ((ivx-IVX)+1)%3;
   int ivz = IVX + ((ivx-IVX)+2)%3;
@@ -209,6 +214,11 @@ void Hydro::RiemannSolver(const int k, const int j, const int il, const int iu,
     for (int n = 0; n < NHYDRO; ++n) {
       flux(n,k,j,i) = flux_interface[n];
     }
+  }
+  if (NSCALARS) {
+    AthenaArray<Real> mflux;
+    mflux.InitWithShallowSlice(flux, 4, IDN, 1);
+    pmy_block->pscalars->ComputeUpwindFlux(k, j, il, iu, rl, rr, mflux, sflx);
   }
   return;
 }

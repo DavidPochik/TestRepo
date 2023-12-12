@@ -40,7 +40,8 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
 
 void EquationOfState::ConservedToPrimitive(
     AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
-    AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
+    AthenaArray<Real> &prim, AthenaArray<Real> &bcc, AthenaArray<Real> &s,
+    const AthenaArray<Real> &r_old, AthenaArray<Real> &r,
     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku) {
   Real gm1 = GetGamma() - 1.0;
 
@@ -85,7 +86,8 @@ void EquationOfState::ConservedToPrimitive(
       }
     }
   }
-
+  if (NSCALARS > 0)
+    PassiveScalarConservedToPrimitive(s, cons, r_old, r, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
@@ -98,7 +100,8 @@ void EquationOfState::ConservedToPrimitive(
 
 void EquationOfState::PrimitiveToConserved(
     const AthenaArray<Real> &prim, const AthenaArray<Real> &bc,
-    AthenaArray<Real> &cons, Coordinates *pco,
+    AthenaArray<Real> &cons, const AthenaArray<Real> &r,
+    AthenaArray<Real> &s, Coordinates *pco,
     int il, int iu, int jl, int ju, int kl, int ku) {
   Real igm1 = 1.0/(GetGamma() - 1.0);
 
@@ -159,7 +162,8 @@ Real EquationOfState::FastMagnetosonicSpeed(const Real prim[(NWAVE)], const Real
 //! \fn void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j,
 //!                                                 int i)
 //! \brief Apply density and pressure floors to reconstructed L/R cell interface states
-void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j, int i) {
+void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, AthenaArray<Real> &r,
+                                           int k, int j, int i) {
   Real& w_d  = prim(IDN,i);
   Real& w_p  = prim(IPR,i);
 
@@ -167,7 +171,8 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
   // apply pressure floor
   w_p = (w_p > pressure_floor_) ?  w_p : pressure_floor_;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarFloors(r, k, j, i);
   return;
 }
 
@@ -177,7 +182,7 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
 //! \brief Apply pressure (prim) floor and correct energy (cons) (typically after W(U))
 void EquationOfState::ApplyPrimitiveConservedFloors(
     AthenaArray<Real> &prim, AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
-    int k, int j, int i) {
+    AthenaArray<Real> &r, AthenaArray<Real> &s, int k, int j, int i) {
   Real gm1 = GetGamma() - 1.0;
   Real& w_d  = prim(IDN,k,j,i);
   Real& w_p  = prim(IPR,k,j,i);
@@ -201,6 +206,7 @@ void EquationOfState::ApplyPrimitiveConservedFloors(
         u_e : ((pressure_floor_/gm1) + pb + e_k);
   w_p = (w_p > pressure_floor_) ?
         w_p : pressure_floor_;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarPrimitiveConservedFloors(s, prim, r, k, j, i);
   return;
 }

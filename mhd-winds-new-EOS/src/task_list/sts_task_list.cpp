@@ -39,6 +39,9 @@
 #include "../scalars/scalars.hpp"
 #include "task_list.hpp"
 
+// empty array to pass in place of scalars when NSCALARS=0
+static AthenaArray<Real> empty;
+
 //----------------------------------------------------------------------------------------
 //! SuperTimeStepTaskList constructor
 
@@ -896,14 +899,16 @@ TaskStatus SuperTimeStepTaskList::Primitives_STS(MeshBlock *pmb, int stage) {
     //! which is not yet compatible with STS, thus making this a safe choice.
     if (do_sts_hydro || do_sts_field) {
       pmb->peos->ConservedToPrimitive(ph->u, ph->w, pf->b,
-                                      ph->w, pf->bcc, pmb->pcoord,
+                                      ph->w, pf->bcc,
+                                      (NSCALARS) ? ps->coarse_s_ : empty,
+                                      (NSCALARS) ? ps->coarse_r_ : empty,
+                                      (NSCALARS) ? ps->coarse_r_ : empty,
+                                      pmb->pcoord,
                                       il, iu, jl, ju, kl, ku);
       if (pmb->porb->orbital_advection_defined) {
         pmb->porb->ResetOrbitalSystemConversionFlag();
       }
-    }
-
-    if (do_sts_scalar) {
+    } else if (do_sts_scalar) {
       pmb->peos->PassiveScalarConservedToPrimitive(ps->s, ph->w,
                                                    ps->r, ps->r,
                                                    pmb->pcoord, il, iu, jl, ju, kl, ku);
@@ -926,6 +931,9 @@ TaskStatus SuperTimeStepTaskList::Primitives_STS(MeshBlock *pmb, int stage) {
       }
       if (do_sts_scalar) {
         pmb->pscalars->sbvar.var_cc = &(pmb->pscalars->r);
+        if (pmb->pmy_mesh->multilevel) {
+          pmb->pscalars->sbvar.coarse_buf = &(pmb->pscalars->coarse_r_);
+        }
       }
       Real time = pmb->pmy_mesh->time;
       if (pmb->pmy_mesh->sts_loc == TaskType::op_split_after) time += pmb->pmy_mesh->dt;
@@ -933,10 +941,13 @@ TaskStatus SuperTimeStepTaskList::Primitives_STS(MeshBlock *pmb, int stage) {
       // Perform 4th order W(U)
       if (do_sts_hydro || do_sts_field) {
         pmb->peos->ConservedToPrimitiveCellAverage(ph->u, ph->w, pf->b,
-                                                   ph->w, pf->bcc, pmb->pcoord,
+                                                   ph->w, pf->bcc,
+                                                   (NSCALARS) ? ps->coarse_s_ : empty,
+                                                   (NSCALARS) ? ps->coarse_r_ : empty,
+                                                   (NSCALARS) ? ps->coarse_r_ : empty,
+                                                   pmb->pcoord,
                                                    il, iu, jl, ju, kl, ku);
-      }
-      if (do_sts_scalar) {
+      } else if (do_sts_scalar) {
         pmb->peos->PassiveScalarConservedToPrimitiveCellAverage(
             ps->s, ps->r, ps->r, pmb->pcoord, il, iu, jl, ju, kl, ku);
       }
@@ -957,6 +968,9 @@ TaskStatus SuperTimeStepTaskList::PhysicalBoundary_STS(MeshBlock *pmb, int stage
     }
     if (do_sts_scalar) {
       pmb->pscalars->sbvar.var_cc = &(pmb->pscalars->r);
+      if (pmb->pmy_mesh->multilevel) {
+        pmb->pscalars->sbvar.coarse_buf = &(pmb->pscalars->coarse_r_);
+      }
     }
     Real time = pmb->pmy_mesh->time;
     if (pmb->pmy_mesh->sts_loc == TaskType::op_split_after) time += pmb->pmy_mesh->dt;

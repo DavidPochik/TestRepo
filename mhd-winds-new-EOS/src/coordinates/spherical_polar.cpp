@@ -470,7 +470,6 @@ void SphericalPolar::AddCoordTermsDivergence(const Real dt, const AthenaArray<Re
         }
 
         u(IM1,k,j,i) += dt*coord_src1_i_(i)*m_ii;
-        pmy_block->user_out_var(5,k,j,i) = coord_src1_i_(i)*m_ii;
 
         // src_2 = -< M_{theta r} ><1/r>
         u(IM2,k,j,i) -= dt*coord_src2_i_(i)*

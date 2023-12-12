@@ -31,15 +31,15 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
-//!    const AthenaArray<Real> &prim_old, const FaceField &b,
-//!    AthenaArray<Real> &prim, AthenaArray<Real> &bcc, Coordinates *pco,
-//!    int il, int iu, int jl, int ju, int kl, int ku);
-//! \brief For the Hydro, converts conserved into primitive variables in adiabatic MHD.
-//!  For the Field, computes cell-centered from face-centered magnetic field.
+//!          const AthenaArray<Real> &prim_old, const FaceField &b,
+//!          AthenaArray<Real> &prim, AthenaArray<Real> &bcc, Coordinates *pco,
+//!          int il, int iu, int jl, int ju, int kl, int ku)
+//! \brief Converts conserved into primitive variables in adiabatic hydro.
 
 void EquationOfState::ConservedToPrimitive(
     AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
-    AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
+    AthenaArray<Real> &prim, AthenaArray<Real> &bcc, AthenaArray<Real> &s,
+    const AthenaArray<Real> &r_old, AthenaArray<Real> &r,
     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku) {
   pmy_block_->pfield->CalculateCellCenteredField(b,bcc,pco,il,iu,jl,ju,kl,ku);
 
@@ -69,19 +69,21 @@ void EquationOfState::ConservedToPrimitive(
       }
     }
   }
+  if (NSCALARS > 0)
+    PassiveScalarConservedToPrimitive(s, cons, r_old, r, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
-//!           const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
-//!           int il, int iu, int jl, int ju, int kl, int ku);
+//!          const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
+//!          int il, int iu, int jl, int ju, int kl, int ku);
 //! \brief Converts primitive variables into conservative variables
-//!        Note that this function assumes cell-centered fields are already calculated
 
 void EquationOfState::PrimitiveToConserved(
     const AthenaArray<Real> &prim, const AthenaArray<Real> &bc,
-    AthenaArray<Real> &cons, Coordinates *pco,
+    AthenaArray<Real> &cons, const AthenaArray<Real> &r,
+    AthenaArray<Real> &s, Coordinates *pco,
     int il, int iu, int jl, int ju, int kl, int ku) {
   for (int k=kl; k<=ku; ++k) {
     for (int j=jl; j<=ju; ++j) {
@@ -104,7 +106,8 @@ void EquationOfState::PrimitiveToConserved(
       }
     }
   }
-
+  if (NSCALARS > 0)
+    PassiveScalarPrimitiveToConserved(r, cons, s, pco, il, iu, jl, ju, kl, ku);
   return;
 }
 
@@ -132,12 +135,14 @@ Real EquationOfState::FastMagnetosonicSpeed(const Real prim[(NWAVE)], const Real
 //! \fn void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j,
 //!                                                 int i)
 //! \brief Apply density floor to reconstructed L/R cell interface states
-void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j, int i) {
+void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, AthenaArray<Real> &r,
+                                           int k, int j, int i) {
   Real& w_d  = prim(IDN,i);
 
   // apply density floor
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarFloors(r, k, j, i);
   return;
 }
 
@@ -147,7 +152,7 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
 //! \brief Apply pressure (prim) floor and correct energy (cons) (typically after W(U))
 void EquationOfState::ApplyPrimitiveConservedFloors(
     AthenaArray<Real> &prim, AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
-    int k, int j, int i) {
+    AthenaArray<Real> &r, AthenaArray<Real> &s, int k, int j, int i) {
   Real& w_d  = prim(IDN,k,j,i);
 
   Real& u_d  = cons(IDN,k,j,i);
@@ -156,6 +161,7 @@ void EquationOfState::ApplyPrimitiveConservedFloors(
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
   // ensure cons density matches
   u_d = w_d;
-
+  if (NSCALARS > 0)
+    ApplyPassiveScalarPrimitiveConservedFloors(s, prim, r, k, j, i);
   return;
 }

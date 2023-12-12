@@ -1,3 +1,4 @@
+
 //========================================================================================
 // Athena++ astrophysical MHD code
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
@@ -66,13 +67,15 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
 //!           const AthenaArray<Real> &prim_old, const FaceField &b,
-//!           AthenaArray<Real> &prim, AthenaArray<Real> &bcc, Coordinates *pco,
-//!           int il, int iu, int jl, int ju, int kl, int ku)
-//! \brief Converts conserved into primitive variables in adiabatic hydro.
+//!           AthenaArray<Real> &prim, AthenaArray<Real> &bcc, AthenaArray<Real> &s,
+//!           const AthenaArray<Real> &r_old, AthenaArray<Real> &r,
+//!           Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku)
+//! \brief Converts conserved into primitive variables.
 
 void EquationOfState::ConservedToPrimitive(
     AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
-    AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
+    AthenaArray<Real> &prim, AthenaArray<Real> &bcc, AthenaArray<Real> &s,
+    const AthenaArray<Real> &r_old, AthenaArray<Real> &r,
     Coordinates *pco, int il,int iu, int jl,int ju, int kl,int ku) {
 
   pmy_block_->pfield->CalculateCellCenteredField(b,bcc,pco,il,iu,jl,ju,kl,ku);
@@ -94,7 +97,15 @@ void EquationOfState::ConservedToPrimitive(
         Real& w_p  = prim(IPR,k,j,i);
 
         // apply density floor, without changing momentum or energy
-        u_d = (u_d > density_floor_) ?  u_d : density_floor_;
+        if (u_d < density_floor_) {
+          for (int n=0; n<NSCALARS; ++n) {
+            Real& s_n = s(n,k,j,i);
+            s_n *= u_d / density_floor_;
+            s_n = (s_n < scalar_floor_*density_floor_) ?
+                  scalar_floor_*density_floor_ : s_n;
+          }
+          u_d = density_floor_;
+        }
         w_d = u_d;
 
         Real di = 1.0/u_d;
@@ -109,9 +120,26 @@ void EquationOfState::ConservedToPrimitive(
         Real pb = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
         Real ke = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
 
+        Real s_cell[NSCALARS];
+        for (int n=0; n<NSCALARS; ++n) {
+          s_cell[n] = s(n,k,j,i);
+        }
+
         // apply pressure/energy floor, correct total energy
-        Real efloor = std::max(energy_floor_, GetEgasFloor(u_d));
-        w_p = PresFromRhoEg(u_d, std::max(u_e - ke - pb, efloor));
+        Real efloor = std::max(energy_floor_, GetEgasFloor(u_d,s_cell));
+        u_e = (u_e - ke - pb > efloor) ?  u_e : efloor + ke + pb;
+        // MSBC: if ke >> energy_floor_ then u_e - ke may still be zero at this point due
+        //       to floating point errors/catastrophic cancellation
+        w_p = PresFromRhoEg(u_d, u_e - ke - pb, s_cell);
+
+        for (int n=0; n<NSCALARS; ++n) {
+          Real& s_n = s(n,k,j,i);
+          Real& r_n = r(n,k,j,i);
+          // apply passive scalars floor to conserved variable first, then transform:
+          // (multi-D fluxes may have caused it to drop below floor)
+          s_n = (s_cell[n] < scalar_floor_ * u_d) ?  scalar_floor_ * u_d : s_cell[n];
+          r_n = s_n * di;
+        }
       }
     }
   }
@@ -122,13 +150,15 @@ void EquationOfState::ConservedToPrimitive(
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
-//!           const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
+//!           const AthenaArray<Real> &bc, AthenaArray<Real> &cons,
+//!           const AthenaArray<Real> &r, AthenaArray<Real> &s, Coordinates *pco,
 //!           int il, int iu, int jl, int ju, int kl, int ku);
 //! \brief Converts primitive variables into conservative variables
 
 void EquationOfState::PrimitiveToConserved(
     const AthenaArray<Real> &prim, const AthenaArray<Real> &bc,
-    AthenaArray<Real> &cons, Coordinates *pco,
+    AthenaArray<Real> &cons, const AthenaArray<Real> &r,
+    AthenaArray<Real> &s, Coordinates *pco,
     int il, int iu, int jl, int ju, int kl, int ku) {
   // Force outer-loop vectorization
 #pragma omp simd
@@ -157,9 +187,20 @@ void EquationOfState::PrimitiveToConserved(
         u_m1 = w_vx*w_d;
         u_m2 = w_vy*w_d;
         u_m3 = w_vz*w_d;
+
+        Real r_cell[NSCALARS];
+        for (int n=0; n<NSCALARS; ++n) {
+          r_cell[n] = r(n,k,j,i);
+        }
         // cellwise conversion
-        u_e = EgasFromRhoP(u_d, w_p) + 0.5*(w_d*(SQR(w_vx) + SQR(w_vy) + SQR(w_vz))
-                                     + (SQR(bcc1) + SQR(bcc2) + SQR(bcc3)));
+        u_e = EgasFromRhoP(u_d, w_p, r_cell) +
+              0.5*(w_d*(SQR(w_vx) + SQR(w_vy) + SQR(w_vz)) +
+                   (SQR(bcc1) + SQR(bcc2) + SQR(bcc3)));
+        for (int n=0; n<NSCALARS; ++n) {
+          Real& s_n = s(n,k,j,i);
+          r_cell[n] = (r_cell[n] < scalar_floor_) ? scalar_floor_ : r_cell[n];
+          s_n = r_cell[n] * u_d;
+        }
       }
     }
   }
@@ -167,20 +208,39 @@ void EquationOfState::PrimitiveToConserved(
   return;
 }
 
+// overload eos calls without tracers for backward compatibility with pgens
+void EquationOfState::PrimitiveToConserved(const AthenaArray<Real> &prim,
+    const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco,
+    int il, int iu, int jl, int ju, int kl, int ku) {
+  if (NSCALARS > 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EquationOfState::PrimitiveToConserved" << std::endl
+        << "When NSCALARS>0, scalars must be passed to this function." << std::endl;
+    ATHENA_ERROR(msg);
+    return;
+  }
+  AthenaArray<Real> empty;
+  PrimitiveToConserved(prim, bc, cons, empty, empty, pco, il, iu, jl, ju, kl, ku);
+}
+
 //----------------------------------------------------------------------------------------
 //! \fn Real EquationOfState::SoundSpeed(Real prim[NHYDRO])
 //! \brief returns adiabatic sound speed given vector of primitive variables
 
-Real EquationOfState::SoundSpeed(const Real prim[NHYDRO]) {
-  return std::sqrt(AsqFromRhoP(prim[IDN], prim[IPR]));
+Real EquationOfState::SoundSpeed(const Real prim[NHYDRO+NSCALARS]) {
+
+  return std::sqrt(AsqFromRhoP(prim[IDN], prim[IPR], prim+NHYDRO));
 }
 
 //----------------------------------------------------------------------------------------
 //! \fn Real EquationOfState::FastMagnetosonicSpeed(const Real prim[], const Real bx)
 //! \brief returns fast magnetosonic speed given vector of primitive variables
 //! Note the formula for (C_f)^2 is positive definite, so this func never returns a NaN
-Real EquationOfState::FastMagnetosonicSpeed(const Real prim[(NWAVE)], const Real bx) {
-  Real asq = AsqFromRhoP(prim[IDN], prim[IPR]) * prim[IDN]; // Actually rho*asq
+Real EquationOfState::FastMagnetosonicSpeed(const Real prim[(NWAVE+NSCALARS)],
+                                            const Real bx) {
+  // Actually rho*asq
+  //std::cout<<"In FMS, gmhd   "<<NWAVE<<"    "<<NSCALARS<<"     "<<NHYDRO<<"     "<<*(prim+NWAVE)<<"\n";
+  Real asq = AsqFromRhoP(prim[IDN], prim[IPR], prim+NWAVE) * prim[IDN];
   Real vaxsq = bx*bx;
   Real ct2 = (prim[IBY]*prim[IBY] + prim[IBZ]*prim[IBZ]);
   Real qsq = vaxsq + ct2 + asq;
@@ -193,16 +253,25 @@ Real EquationOfState::FastMagnetosonicSpeed(const Real prim[(NWAVE)], const Real
 //!                                                 int i)
 //! \brief Apply density and pressure floors to reconstructed L/R cell interface states
 
-void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j, int i) {
+void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, AthenaArray<Real> &r,
+                                           int k, int j, int i) {
   Real& w_d  = prim(IDN,i);
   Real& w_p  = prim(IPR,i);
-
 
   // apply density floor
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
   // apply pressure floor
-  Real pfloor = std::max(pressure_floor_, GetPresFloor(w_d));
-  w_p = (w_p > pressure_floor_) ?  w_p : pressure_floor_;
+  Real r_cell[NSCALARS];
+  for (int n=0; n<NSCALARS; ++n) {
+     r_cell[n] = r(n,i);
+
+  }
+  Real pfloor = std::max(pressure_floor_, GetPresFloor(w_d,r_cell));
+  w_p = (w_p > pfloor) ?  w_p : pfloor;
+  for (int n=0; n<NSCALARS; ++n) {
+    Real& r_n  = r(n,i);
+    r_n = (r_n > scalar_floor_) ?  r_n : scalar_floor_;
+  }
 
   return;
 }
@@ -213,7 +282,7 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
 //! \brief Apply pressure (prim) floor and correct energy (cons) (typically after W(U))
 void EquationOfState::ApplyPrimitiveConservedFloors(
     AthenaArray<Real> &prim, AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
-    int k, int j, int i) {
+    AthenaArray<Real> &r, AthenaArray<Real> &s, int k, int j, int i) {
   Real& w_d  = prim(IDN,k,j,i);
   Real& w_p  = prim(IPR,k,j,i);
 
@@ -223,19 +292,94 @@ void EquationOfState::ApplyPrimitiveConservedFloors(
   const Real& bcc2 = bcc(IB2,k,j,i);
   const Real& bcc3 = bcc(IB3,k,j,i);
   // apply (prim) density floor, without changing momentum or energy
-  w_d = (w_d > density_floor_) ?  w_d : density_floor_;
+  if (w_d < density_floor_) {
+    w_d = density_floor_;
+    for (int n=0; n<NSCALARS; ++n) {
+      // should be u_d instead but since this is non-rel u_d=w_d
+      s(n,k,j,i) = r(n,k,j,i) * w_d;
+    }
+  }
   // ensure cons density matches
   u_d = w_d;
 
   Real pb = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
   Real e_k = 0.5*w_d*(SQR(prim(IVX,k,j,i)) + SQR(prim(IVY,k,j,i)) + SQR(prim(IVZ,k,j,i)));
   // apply pressure floor, correct total energy
-  Real pfloor = std::max(pressure_floor_, GetPresFloor(w_d));
-  Real efloor = std::max(energy_floor_, GetEgasFloor(u_d));
+  Real s_cell[NSCALARS];
+  for (int n=0; n<NSCALARS; ++n) {
+     s_cell[n] = s(n,k,j,i);
+  }
+  Real r_cell[NSCALARS];
+  for (int n=0; n<NSCALARS; ++n) {
+     r_cell[n] = r(n,k,j,i);
+  }
+  Real efloor = std::max(energy_floor_, GetEgasFloor(u_d,s_cell));
+  Real pfloor = std::max(pressure_floor_, GetPresFloor(w_d,r_cell));
   u_e = std::max(u_e, efloor + e_k + pb);
   w_p = (w_p > pfloor) ? w_p : pfloor;
+  if (NSCALARS) {
+    Real di = 1.0/w_d;
+    for (int n=0; n<NSCALARS; ++n) {
+      Real& s_n  = s(n,k,j,i);
+      Real& r_n  = r(n,k,j,i);
+
+      // should be u_d instead but since this is non-rel u_d=w_d
+      s_n = (s_n < scalar_floor_*w_d) ?  scalar_floor_*w_d : s_n;
+
+      // this next line, when applied indiscriminately, erases the accuracy gains
+      // performed in the 4th order stencils, since <r> != <s>*<1/di>, in general
+      r_n = s_n*di;
+      // however, if r_n is riding the variable floor, it probably should be applied so
+      // that s_n = rho*r_n is consistent (more concerned with conservation than order of
+      // accuracy when quantities are floored)
+    }
+  }
 
   return;
+}
+
+// overload eos calls without tracers for backward compatibility
+
+//----------------------------------------------------------------------------------------
+//! \fn Real EquationOfState::PresFromRhoEg(Real rho, Real egas)
+//! \brief Return gas pressure
+Real EquationOfState::PresFromRhoEg(Real rho, Real egas) {
+  if (NSCALARS > 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EquationOfState::PresFromRhoEg" << std::endl
+        << "When NSCALARS>0, scalars (s) must be passed as a 3rd argument" << std::endl;
+    ATHENA_ERROR(msg);
+    return -1.0;
+  }
+  return PresFromRhoEg(rho, egas, nullptr);
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn Real EquationOfState::EgasFromRhoP(Real rho, Real pres)
+//! \brief Return internal energy density
+Real EquationOfState::EgasFromRhoP(Real rho, Real pres) {
+  if (NSCALARS > 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EquationOfState::EgasFromRhoP" << std::endl
+        << "When NSCALARS>0, scalars (r) must be passed as a 3rd argument" << std::endl;
+    ATHENA_ERROR(msg);
+    return -1.0;
+  }
+  return EgasFromRhoP(rho, pres, nullptr);
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn Real EquationOfState::AsqFromRhoP(Real rho, Real pres)
+//! \brief Return adiabatic sound speed squared
+Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
+  if (NSCALARS > 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in EquationOfState::AsqFromRhoP" << std::endl
+        << "When NSCALARS>0, scalars (r) must be passed as a 3rd argument" << std::endl;
+    ATHENA_ERROR(msg);
+    return -1.0;
+  }
+  return AsqFromRhoP(rho, pres, nullptr);
 }
 
 Real EquationOfState::GetGamma() {
