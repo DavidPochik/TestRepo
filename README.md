@@ -1,4 +1,12 @@
 # athena-accretion
+4/5/2024 version of my athena code. Calculates Laccretion in pgen.
+
+
+
+
+
+
+________________________________________________(OLD)_______________________________________________________________________
 My version of mhd-winds-new-EOS (https://github.com/mattjraives/mhd-winds), which is fairly old (dates back to mid 2021).
 The only updated portions since then are the qw_EOS.cpp file (Newest version provided by Tejas Prasanna on March 29th, 2022) and my problem generator file (accretion.cpp and similar copies).
 
